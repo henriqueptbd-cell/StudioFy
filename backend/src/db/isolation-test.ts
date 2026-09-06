@@ -1,5 +1,5 @@
 import { db, pool } from './client.js';
-import { tenants, users, services } from './schema.js';
+import { tenants, users } from './schema.js';
 import { eq } from 'drizzle-orm';
 
 async function testIsolation() {

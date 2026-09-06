@@ -94,12 +94,16 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** disponibilizar uma API consistente, autenticada e validada.
 
-- [ ] Configurar Express, TypeScript, Zod, CORS e tratamento global de erros.
-- [ ] Implementar hash seguro de senhas e login com JWT de expiracao curta.
-- [ ] Implementar `ensureAuthenticated`, contexto de tenant e autorizacao por papel.
-- [ ] Aplicar rate limiting e validacao de entrada nas rotas publicas.
-- [ ] Criar o fluxo de provisionamento do primeiro administrador de um tenant.
-- [ ] Definir contratos de resposta e erros da API.
+> **Status:** concluida para o escopo atual. A cobertura automatizada esta descrita
+> em [TESTING.md](./TESTING.md); testes especificos de agendamento e RLS continuam
+> nas fases correspondentes.
+
+- [x] Configurar Express, TypeScript, Zod, CORS e tratamento global de erros.
+- [x] Implementar hash seguro de senhas e endpoint de login com JWT de expiracao curta.
+- [x] Integrar `ensureAuthenticated`, contexto de tenant na requisicao e autorizacao por papel no fluxo autenticado atual. A vinculacao desse contexto ao cliente PostgreSQL protegido por RLS permanece na Fase 2.
+- [x] Aplicar rate limiting e validacao de entrada na rota publica de provisionamento; as rotas publicas de agendamento serao cobertas na Fase 4.
+- [x] Criar o fluxo de provisionamento do primeiro administrador de um tenant.
+- [x] Definir contratos de resposta e erros da API.
 
 ## FASE 4: Primeiro fluxo completo de agendamento
 
