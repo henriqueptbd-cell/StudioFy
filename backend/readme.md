@@ -50,9 +50,14 @@ npm install
 ```env
 PORT=3333
 DATABASE_URL=postgresql://user:password@neon-db-url/studiofy?sslmode=verify-full
+MIGRATION_DATABASE_URL=postgresql://owner:password@neon-db-url/studiofy?sslmode=verify-full
 JWT_SECRET=sua_chave_secreta_aqui
 
 ```
+
+`DATABASE_URL` deve apontar para a role restrita `studiofy_app`. Use
+`MIGRATION_DATABASE_URL` com a role proprietaria/admin somente para executar
+migrations e aplicar RLS.
 
 3. Execute as migrações do banco (comando oficial previsto):
 

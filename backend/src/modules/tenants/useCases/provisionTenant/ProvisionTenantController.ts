@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { sql } from 'drizzle-orm';
 import { eq } from 'drizzle-orm';
 import { db } from '../../../../db/client.js';
 import { tenants, users } from '../../../../db/schema.js';
@@ -54,6 +55,8 @@ export class ProvisionTenantController {
             if (!newTenant) {
                 throw new AppError('Falha ao criar o estabelecimento.', 500, 'TENANT_CREATION_FAILED');
             }
+
+            await tx.execute(sql`SELECT set_config('app.current_tenant_id', ${newTenant.id}, true)`);
 
             const [newAdmin] = await tx
                 .insert(users)

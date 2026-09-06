@@ -10,6 +10,10 @@ ampliados ao longo do desenvolvimento.
 - **TypeScript:** verificacao de tipos antes da execucao.
 - **ESLint:** verificacao de qualidade e padrao do codigo.
 
+O Vitest executa somente arquivos `src/**/*.spec.ts` e ignora `dist/`. A pasta
+`dist` contem JavaScript compilado e nao deve ser descoberta como uma segunda copia
+da mesma suite.
+
 ## Como executar
 
 A partir da raiz do projeto:
@@ -45,7 +49,7 @@ Ele cobre o fluxo integrado da Fase 3:
 - rejeicao de rota protegida sem token;
 - acesso de rota protegida com token valido.
 
-A suite atual foi executada com sucesso: **2 arquivos de teste e 10 testes aprovados**.
+A suite atual foi executada com sucesso: **2 arquivos de teste e 9 testes aprovados**.
 
 ## O que este teste garante
 
@@ -61,10 +65,17 @@ isolamento deve consultar o PostgreSQL com dois tenants e uma role sem `BYPASSRL
 
 ### Fase 2 - Banco e seguranca
 
-- [ ] Ler dados de dois tenants usando contextos RLS diferentes.
-- [ ] Tentar inserir, alterar e excluir dados usando o tenant incorreto.
-- [ ] Confirmar que a role da aplicacao nao possui `SUPERUSER` nem `BYPASSRLS`.
-- [ ] Enviar duas criacoes concorrentes para o mesmo intervalo e aceitar somente uma.
+Os testes abaixo ja foram executados com sucesso na role restrita da aplicacao:
+
+- isolamento de leitura entre dois tenants;
+- bloqueio de alteracao e exclusao entre tenants;
+- role sem `SUPERUSER` e `BYPASSRLS`;
+- concorrencia com somente uma insercao aceita.
+
+- [x] Ler dados de dois tenants usando contextos RLS diferentes.
+- [x] Tentar inserir, alterar e excluir dados usando o tenant incorreto.
+- [x] Confirmar que a role da aplicacao nao possui `SUPERUSER` nem `BYPASSRLS`.
+- [x] Enviar duas criacoes concorrentes para o mesmo intervalo e aceitar somente uma.
 
 ### Fase 4 - Agendamentos
 
@@ -87,4 +98,6 @@ isolamento deve consultar o PostgreSQL com dois tenants e uma role sem `BYPASSRL
 - Testes de integracao devem limpar ou isolar os dados criados.
 - Credenciais reais nunca devem aparecer em testes, fixtures ou logs.
 - Testes que dependem de PostgreSQL devem declarar claramente o ambiente necessario.
+- A suite de autenticacao exige `DATABASE_URL` funcional; migrations devem usar
+  `MIGRATION_DATABASE_URL` com a role proprietaria, nunca a role restrita da API.
 - O CI deve executar test, typecheck, lint e build antes de aceitar alteracoes.

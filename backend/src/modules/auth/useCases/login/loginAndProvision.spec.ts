@@ -62,6 +62,7 @@ describe('Suite de Testes de Integração - FASE 3 (Segurança & Autenticação)
         const response = await request(app)
             .post('/api/v1/auth/login')
             .send({
+                tenantSlug: uniqueSlug,
                 email: testEmail,
                 password: 'senha_segura_123',
             });

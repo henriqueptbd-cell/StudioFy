@@ -76,7 +76,7 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** criar uma base consistente para as regras de negocio e impedir vazamento entre tenants.
 
-> **Status:** schema, migration, RLS, constraints e trigger de conflito preparados e aplicados. A fase ainda nao deve ser marcada como concluida ate executar os testes de isolamento e concorrencia com a role real da aplicacao.
+> **Status:** concluida. Schema, migration, RLS, constraints, trigger de conflito e testes de seguranca foram executados com a role da aplicacao.
 
 - [x] Criar as tabelas `tenants`, `users`, `services`, `customers`, `schedule_configs` e `appointments`.
 - [x] Adicionar timestamps, status, flags de ativacao, indices e constraints necessarios.
@@ -85,10 +85,10 @@ Testes, endurecimento e deploy
 - [x] Definir as chaves estrangeiras e o comportamento de exclusao dos registros.
 - [x] Criar migration inicial e um processo repetivel para aplica-la.
 - [x] Configurar RLS e o contexto de tenant usado pelas conexoes do backend.
-- [ ] Testar leitura e escrita de um tenant tentando acessar dados de outro.
+- [x] Testar leitura e escrita de um tenant tentando acessar dados de outro.
 - [x] Implementar a estrategia para impedir sobreposicoes entre agendamentos `PENDENTE` e `CONFIRMADO`.
-- [ ] Confirmar que a role da aplicacao nao possui `SUPERUSER` nem `BYPASSRLS`.
-- [ ] Testar duas insercoes concorrentes e confirmar que somente uma e aceita.
+- [x] Confirmar que a role da aplicacao nao possui `SUPERUSER` nem `BYPASSRLS`.
+- [x] Testar duas insercoes concorrentes e confirmar que somente uma e aceita.
 
 ## FASE 3: Backend base e seguranca
 
@@ -100,7 +100,7 @@ Testes, endurecimento e deploy
 
 - [x] Configurar Express, TypeScript, Zod, CORS e tratamento global de erros.
 - [x] Implementar hash seguro de senhas e endpoint de login com JWT de expiracao curta.
-- [x] Integrar `ensureAuthenticated`, contexto de tenant na requisicao e autorizacao por papel no fluxo autenticado atual. A vinculacao desse contexto ao cliente PostgreSQL protegido por RLS permanece na Fase 2.
+- [x] Integrar `ensureAuthenticated`, contexto de tenant na requisicao e autorizacao por papel no fluxo autenticado atual, com consultas protegidas executadas pelo contexto RLS do tenant.
 - [x] Aplicar rate limiting e validacao de entrada na rota publica de provisionamento; as rotas publicas de agendamento serao cobertas na Fase 4.
 - [x] Criar o fluxo de provisionamento do primeiro administrador de um tenant.
 - [x] Definir contratos de resposta e erros da API.

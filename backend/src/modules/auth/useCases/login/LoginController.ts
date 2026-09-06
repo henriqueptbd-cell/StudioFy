@@ -1,25 +1,31 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { db } from '../../../../db/client.js';
-import { users } from '../../../../db/schema.js';
+import { db, withTenant } from '../../../../db/client.js';
+import { tenants, users } from '../../../../db/schema.js';
 import { AuthProvider } from '../../../../shared/providers/AuthProvider.js';
 import { AppError } from '../../../../shared/errors/AppError.js';
 
 const loginSchema = z.object({
+    tenantSlug: z.string().min(2, 'Slug do estabelecimento e obrigatorio.'),
     email: z.string().email('E-mail inválido.'),
     password: z.string().min(1, 'A senha é obrigatória.'),
 });
 
 export class LoginController {
     async handle(request: Request, response: Response): Promise<Response> {
-        const { email, password } = loginSchema.parse(request.body);
+        const { tenantSlug, email, password } = loginSchema.parse(request.body);
 
-        // 1. Buscar usuário pelo e-mail
-        const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.email, email));
+        const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, tenantSlug));
+
+        if (!tenant) {
+            throw new AppError('E-mail ou senha incorretos.', 401, 'INVALID_CREDENTIALS');
+        }
+
+        // O usuario so e consultado depois que o tenant foi estabelecido no contexto RLS.
+        const [user] = await withTenant(tenant.id, async (tx) =>
+            tx.select().from(users).where(eq(users.email, email)),
+        );
 
         if (!user) {
             throw new AppError('E-mail ou senha incorretos.', 401, 'INVALID_CREDENTIALS');

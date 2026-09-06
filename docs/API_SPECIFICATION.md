@@ -20,6 +20,7 @@ Realiza a autenticação de profissionais e administradores.
 
 ```json
 {
+  "tenantSlug": "studio-beleza",
   "email": "profissional@salao.com",
   "password": "senha_segura"
 }
