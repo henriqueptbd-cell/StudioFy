@@ -150,14 +150,14 @@ A profissional terá uma área autenticada própria.
 
 Poderá, conforme suas permissões:
 
-- visualizar sua agenda;
+- visualizar a agenda geral unificada do estabelecimento;
 - visualizar solicitações pendentes;
 - confirmar agendamentos;
 - recusar agendamentos;
 - cancelar agendamentos;
 - visualizar informações necessárias das clientes;
 - utilizar o WhatsApp para comunicação;
-- visualizar seus horários de atendimento.
+- visualizar os horários gerais de atendimento do estabelecimento.
 
 ### 5.3 Administrador
 
@@ -318,6 +318,10 @@ O projeto utilizará:
 
 O banco será responsável pelos dados de negócio da aplicação.
 
+Cada tenant terá um fuso horário IANA, inicialmente `America/Sao_Paulo`. Os
+agendamentos serão armazenados em UTC no PostgreSQL e exibidos no horário local do
+estabelecimento.
+
 A autenticação será necessária para profissionais e administradores, enquanto o cliente final não terá autenticação obrigatória no MVP.
 
 A modelagem deverá considerar o estabelecimento como uma entidade central, permitindo isolamento dos dados entre diferentes estabelecimentos.
@@ -453,7 +457,7 @@ A primeira versão deverá se concentrar no problema principal: **organização 
 - solicitação de agendamento;
 - status de agendamento;
 - confirmação/recusa;
-- agenda profissional;
+- agenda geral unificada;
 - visão administrativa;
 - geração de links para WhatsApp;
 - autenticação de profissionais/administradores;

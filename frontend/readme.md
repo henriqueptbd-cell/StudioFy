@@ -4,8 +4,8 @@ Este diretório contém a aplicação web client-side do **StudioFy**, que será
 desenvolvida com foco na experiência **Mobile-first** e separação clara entre a
 interface pública do cliente e o painel administrativo.
 
-O projeto ainda está na fase de documentação e fundação. A inicialização executável
-com Vite e os scripts abaixo serão concluídos conforme o roadmap.
+O projeto está na fundação executável com Vite. A implementação das telas seguirá
+as próximas fases do roadmap.
 
 ---
 
@@ -47,7 +47,7 @@ npm install
 
 ```
 
-2. Configure o arquivo `.env` a partir do `.env.example`:
+2. Copie `.env.example` para `.env` e configure a URL da API:
 
 ```env
 VITE_API_URL=http://localhost:3333/api/v1

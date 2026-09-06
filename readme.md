@@ -27,7 +27,7 @@ Para detalhes sobre as decisões técnicas e padrões de código, consulte o [AR
 
 - **Frontend:** React, TypeScript, Tailwind CSS, TanStack Query (React Query)
 - **Backend:** Node.js, Express, TypeScript, Zod, JWT
-- **Database:** PostgreSQL (Neon DB), com Drizzle ORM ou Prisma a definir na Fase 1
+- **Database:** PostgreSQL (Neon DB) com Drizzle ORM
 - **Comunicação:** Integração via links dinâmicos do WhatsApp (`wa.me`)
 
 ---
@@ -50,9 +50,17 @@ cd studiofy
 
 ```
 
-2. **Configurar o Banco de Dados:**
+2. **Instalar as dependências:**
+
+```bash
+npm install
+npm install --prefix backend
+npm install --prefix frontend
+```
+
+3. **Configurar o Banco de Dados:**
    Consulte as instruções em [database/readme.md](./database/readme.md). Os scripts oficiais serão definidos na Fase 1.
-3. **Executar o Backend:**
+4. **Executar o Backend:**
 
 ```bash
 cd backend
@@ -63,7 +71,7 @@ npm run dev
 
 Instruções detalhadas em [backend/readme.md](./backend/readme.md).
 
-4. **Executar o Frontend:**
+5. **Executar o Frontend:**
 
 ```bash
 cd ../frontend

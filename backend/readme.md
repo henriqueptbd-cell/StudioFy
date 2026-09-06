@@ -2,8 +2,8 @@
 
 Este diretório contém a API REST em **Node.js** que alimentará a aplicação StudioFy. O backend seguirá uma arquitetura em camadas (Clean Architecture) e lidará com autenticação, regras de transição do agendamento e isolamento multi-tenant.
 
-O projeto ainda está na fase de documentação e fundação. A inicialização executável,
-a escolha do ORM e os scripts abaixo serão concluídos conforme o roadmap.
+O projeto está na fundação executável. O ORM escolhido é o **Drizzle ORM** e a
+implementação dos módulos de negócio seguirá as próximas fases do roadmap.
 
 ---
 
@@ -13,7 +13,7 @@ a escolha do ORM e os scripts abaixo serão concluídos conforme o roadmap.
 - **TypeScript:** Tipagem estática end-to-end.
 - **Zod:** Validação e parsing de payloads de requisição no runtime.
 - **JWT (JSON Web Token):** Autenticação de Administradores e Profissionais.
-- **Drizzle ORM ou Prisma:** A escolha será feita na Fase 1 do roadmap.
+- **Drizzle ORM:** Query builder tipado e migrations para PostgreSQL.
 
 ---
 
@@ -45,7 +45,7 @@ npm install
 
 ```
 
-2. Configure as variáveis no `.env` a partir do `.env.example`:
+2. Copie `.env.example` para `.env` e configure as variáveis:
 
 ```env
 PORT=3333

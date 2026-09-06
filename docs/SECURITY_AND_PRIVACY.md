@@ -105,8 +105,8 @@ estabelecimento, respeitando as regras de domínio.
 
 ### Profissional
 
-Pode consultar a agenda permitida, analisar solicitações, confirmar, recusar,
-cancelar ou concluir atendimentos conforme as permissões definidas pelo domínio.
+Pode consultar a agenda geral unificada, analisar solicitações, confirmar, recusar,
+cancelar ou concluir atendimentos conforme as regras do domínio.
 Não deve alterar identidade visual, outros usuários ou configurações administrativas
 sem autorização explícita.
 
@@ -147,6 +147,7 @@ O MVP deve seguir minimização e finalidade clara:
 - o cliente informa apenas nome e telefone para solicitar um horário;
 - não são necessários cadastro, senha, e-mail ou dados sensíveis;
 - o telefone é usado para identificar a solicitação e permitir contato do estabelecimento;
+- solicitacoes `PENDENTE` expiram em 12 horas ou 1 hora antes do atendimento, o que ocorrer primeiro;
 - o acesso aos dados do cliente fica restrito ao tenant responsável e aos usuários autorizados;
 - dados pessoais não devem ser incluídos em URLs, logs ou mensagens de erro;
 - o sistema deve documentar retenção, exclusão e atendimento de solicitações do titular antes da operação em produção;
@@ -218,6 +219,4 @@ Antes do desenvolvimento das funcionalidades correspondentes, devem ser definido
 - expiração, revogação e eventual refresh token;
 - política de retenção e exclusão de clientes e agendamentos;
 - limite de rate limiting por IP e tenant;
-- regra para solicitações `PENDENTE` concorrentes;
-- permissões exatas do profissional sobre cancelamento e agenda;
 - necessidade de auditoria persistente além dos logs operacionais.

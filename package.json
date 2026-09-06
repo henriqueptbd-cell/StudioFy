@@ -1,0 +1,18 @@
+{
+    "name": "studiofy",
+    "private": true,
+    "scripts": {
+        "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+        "build": "npm run build --prefix backend && npm run build --prefix frontend",
+        "test": "npm run typecheck --prefix backend && npm run typecheck --prefix frontend",
+        "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "db:migrate": "npm run db:migrate --prefix backend",
+        "db:seed": "npm run db:seed --prefix backend"
+    },
+    "devDependencies": {
+        "concurrently": "^9.1.2",
+        "prettier": "^3.5.3"
+    }
+}

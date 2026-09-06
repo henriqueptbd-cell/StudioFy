@@ -45,16 +45,16 @@ O sistema adota uma arquitetura em camadas (**Layered / Clean Architecture**) fo
 
 ## 🛠️ 2. Tech Stack
 
-| Camada              | Tecnologia                     | Uso                                             |
-| ------------------- | ------------------------------ | ----------------------------------------------- |
-| Frontend            | React + TypeScript             | SPA reativa, tipada e mobile-first.             |
-| Estilização         | Tailwind CSS + CSS Variables   | Responsividade e tema personalizado por tenant. |
-| Data Fetching       | TanStack Query                 | Cache, sincronizacao e estados de requisicao.   |
-| Backend             | Node.js + TypeScript + Express | API REST e camada HTTP.                         |
-| Validacao           | Zod                            | Validacao de payloads em runtime.               |
-| Banco de dados      | PostgreSQL via Neon DB         | Persistencia relacional e RLS.                  |
-| ORM / Query Builder | Drizzle ORM ou Prisma          | A escolha sera feita na Fase 1 do roadmap.      |
-| Comunicacao         | Links `wa.me`                  | Mensagens manuais pelo WhatsApp no MVP.         |
+| Camada              | Tecnologia                     | Uso                                                |
+| ------------------- | ------------------------------ | -------------------------------------------------- |
+| Frontend            | React + TypeScript             | SPA reativa, tipada e mobile-first.                |
+| Estilização         | Tailwind CSS + CSS Variables   | Responsividade e tema personalizado por tenant.    |
+| Data Fetching       | TanStack Query                 | Cache, sincronizacao e estados de requisicao.      |
+| Backend             | Node.js + TypeScript + Express | API REST e camada HTTP.                            |
+| Validacao           | Zod                            | Validacao de payloads em runtime.                  |
+| Banco de dados      | PostgreSQL via Neon DB         | Persistencia relacional e RLS.                     |
+| ORM / Query Builder | Drizzle ORM                    | Query builder tipado e migrations para PostgreSQL. |
+| Comunicacao         | Links `wa.me`                  | Mensagens manuais pelo WhatsApp no MVP.            |
 
 ---
 
@@ -104,6 +104,7 @@ CREATE TABLE tenants (
     logo_url TEXT,
     primary_color VARCHAR(7) DEFAULT '#000000',
     phone VARCHAR(20) NOT NULL,
+    timezone VARCHAR(64) NOT NULL DEFAULT 'America/Sao_Paulo', -- Identificador IANA
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -166,6 +167,7 @@ CREATE TABLE appointments (
     status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE'
         CHECK (status IN ('PENDENTE', 'CONFIRMADO', 'RECUSADO', 'CANCELADO', 'CONCLUIDO')),
     CHECK (end_time > start_time),
+    expires_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -207,11 +209,14 @@ Transições de estado válidas aplicadas obrigatoriamente na camada de domínio
 
 - `PENDENTE` ➔ `RECUSADO` (Ação do Profissional / Admin)
 
+- `PENDENTE` ➔ `CANCELADO` (Expiracao automatica ou cancelamento pelo estabelecimento)
+
 - `CONFIRMADO` ➔ `CONCLUIDO` (Finalização do Atendimento)
 
 - `CONFIRMADO` ➔ `CANCELADO` (Cancelamento prévio)
 
-- A politica para cancelamento de `PENDENTE` e reagendamento sera definida na Fase 0 do roadmap.
+- `PENDENTE` expira em 12 horas ou 1 hora antes do inicio, o que ocorrer primeiro, e passa para `CANCELADO`.
+- Reagendamento nao faz parte do MVP; o cliente deve solicitar um novo horario ou usar o WhatsApp.
 
 ---
 
