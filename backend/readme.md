@@ -49,7 +49,7 @@ npm install
 
 ```env
 PORT=3333
-DATABASE_URL=postgresql://user:password@neon-db-url/studiofy?sslmode=require
+DATABASE_URL=postgresql://user:password@neon-db-url/studiofy?sslmode=verify-full
 JWT_SECRET=sua_chave_secreta_aqui
 
 ```

@@ -76,15 +76,19 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** criar uma base consistente para as regras de negocio e impedir vazamento entre tenants.
 
-- [ ] Criar as tabelas `tenants`, `users`, `services`, `customers`, `schedule_configs` e `appointments`.
-- [ ] Adicionar timestamps, status, flags de ativacao, indices e constraints necessarios.
-- [ ] Adicionar `tenants.timezone` com valor padrao `America/Sao_Paulo` e `appointments.expires_at` em UTC.
-- [ ] Garantir que cliente, servico e profissional de um agendamento pertencem ao mesmo tenant.
-- [ ] Definir as chaves estrangeiras e o comportamento de exclusao dos registros.
-- [ ] Criar migration inicial e um processo repetivel para aplica-la.
-- [ ] Configurar RLS e o contexto de tenant usado pelas conexoes do backend.
+> **Status:** schema, migration, RLS, constraints e trigger de conflito preparados e aplicados. A fase ainda nao deve ser marcada como concluida ate executar os testes de isolamento e concorrencia com a role real da aplicacao.
+
+- [x] Criar as tabelas `tenants`, `users`, `services`, `customers`, `schedule_configs` e `appointments`.
+- [x] Adicionar timestamps, status, flags de ativacao, indices e constraints necessarios.
+- [x] Adicionar `tenants.timezone` com valor padrao `America/Sao_Paulo` e `appointments.expires_at` em UTC.
+- [x] Garantir que cliente, servico e profissional de um agendamento pertencem ao mesmo tenant.
+- [x] Definir as chaves estrangeiras e o comportamento de exclusao dos registros.
+- [x] Criar migration inicial e um processo repetivel para aplica-la.
+- [x] Configurar RLS e o contexto de tenant usado pelas conexoes do backend.
 - [ ] Testar leitura e escrita de um tenant tentando acessar dados de outro.
-- [ ] Implementar a estrategia para impedir sobreposicoes entre agendamentos `PENDENTE` e `CONFIRMADO`.
+- [x] Implementar a estrategia para impedir sobreposicoes entre agendamentos `PENDENTE` e `CONFIRMADO`.
+- [ ] Confirmar que a role da aplicacao nao possui `SUPERUSER` nem `BYPASSRLS`.
+- [ ] Testar duas insercoes concorrentes e confirmar que somente uma e aceita.
 
 ## FASE 3: Backend base e seguranca
 

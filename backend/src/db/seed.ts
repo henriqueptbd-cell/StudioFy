@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db, pool } from './client.js';
-import { scheduleConfigs, services, tenants, users } from './schema.js';
+import { scheduleConfigs, services, tenants, users, customers, appointments } from './schema.js';
 
 const [tenant] = await db
     .insert(tenants)
@@ -30,6 +30,19 @@ await db.insert(users).values({
     role: 'ADMIN',
 });
 
+await db.insert(customers).values([
+    {
+        tenantId: existingTenant.id,
+        name: 'Maria Silva',
+        phone: '5511999999999',
+    },
+    {
+        tenantId: existingTenant.id,
+        name: 'Joao Pereira',
+        phone: '5511999999998',
+    },
+]);
+
 await db.insert(services).values([
     {
         tenantId: existingTenant.id,
@@ -56,6 +69,19 @@ await db.insert(scheduleConfigs).values(
         isClosed: dayOfWeek === 0,
     })),
 );
+
+await db.insert(appointments).values([
+    {
+        tenantId: existingTenant.id,
+        customerId: 1,
+        serviceId: 1,
+        professionalId: 1,
+        startTime: new Date('2025-01-10T14:00:00Z'),
+        endTime: new Date('2025-01-10T14:30:00Z'),
+        status: 'PENDENTE',
+        expiresAt: new Date('2025-01-10T13:00:00Z'),
+    },
+]);
 
 console.log('Seed concluido para o tenant studiofy-demo.');
 await pool.end();
