@@ -1,6 +1,6 @@
 # 🏗️ Arquitetura e Engenharia do Sistema — StudioFy
 
-O **StudioFy** é uma plataforma web SaaS multi-tenant de agendamento e gestão para negócios que atendem por horário (salões de beleza, barbearias, clínicas de estética)[cite: 1].
+O **StudioFy** é uma plataforma web SaaS multi-tenant de agendamento e gestão para negócios que atendem por horário (salões de beleza, barbearias e clínicas de estética).
 
 Este documento descreve as decisões arquiteturais, padrões de projeto, estrutura do banco de dados, fluxo de dados e práticas de código recomendadas para o desenvolvimento da aplicação.
 
@@ -45,42 +45,16 @@ O sistema adota uma arquitetura em camadas (**Layered / Clean Architecture**) fo
 
 ## 🛠️ 2. Tech Stack
 
-| Camada       | Tecnologia         | Justificativa / Uso |
-| ------------ | ------------------ | ------------------- |
-| **Frontend** | React + TypeScript |
-
-| SPA reativa, fortemente tipada e focada em performance.
-
-|
-| **Estilização** | Tailwind CSS + CSS Variables | Facilita a abordagem _Mobile-first_ e a tematização dinâmica (White-label) por tenant.
-
-|
-| **Data Fetching** | TanStack Query (React Query)
-
-| Gestão de cache, sincronização de estado com o servidor e gerenciamento de _loading/error_.
-
-|
-| **Backend** | Node.js + TypeScript + Express
-
-| Ecossistema leve, escalável e produtivo com segurança de tipos.
-
-|
-| **Validação** | Zod | Validação de payloads de requisições DTOs e esquemas de dados no runtime. |
-| **Banco de Dados** | PostgreSQL (via Neon DB)
-
-| Banco relacional robusto com suporte nativo a Row Level Security (RLS) e escalabilidade Serverless.
-
-|
-| **ORM / Query Builder** | Drizzle ORM ou Prisma
-
-| Tipagem ponta a ponta (Type-safe SQL) e migrações declarativas.
-
-|
-| **Integração** | WhatsApp via Links (`wa.me`)
-
-| Geração dinâmica de mensagens sem dependência de APIs pagas no MVP.
-
-|
+| Camada              | Tecnologia                     | Uso                                             |
+| ------------------- | ------------------------------ | ----------------------------------------------- |
+| Frontend            | React + TypeScript             | SPA reativa, tipada e mobile-first.             |
+| Estilização         | Tailwind CSS + CSS Variables   | Responsividade e tema personalizado por tenant. |
+| Data Fetching       | TanStack Query                 | Cache, sincronizacao e estados de requisicao.   |
+| Backend             | Node.js + TypeScript + Express | API REST e camada HTTP.                         |
+| Validacao           | Zod                            | Validacao de payloads em runtime.               |
+| Banco de dados      | PostgreSQL via Neon DB         | Persistencia relacional e RLS.                  |
+| ORM / Query Builder | Drizzle ORM ou Prisma          | A escolha sera feita na Fase 1 do roadmap.      |
+| Comunicacao         | Links `wa.me`                  | Mensagens manuais pelo WhatsApp no MVP.         |
 
 ---
 
@@ -98,6 +72,10 @@ O StudioFy foi projetado desde o início como um sistema **Multi-tenant**.
 
 - **Área Pública:** Resolvido via `slug` ou subdomínio presente na rota (ex: `/api/v1/public/tenants/:slug/services`).
 - **Área Autenticada:** Extraído do token JWT autenticado do usuário do estabelecimento.
+
+O backend deve estabelecer o contexto do tenant na conexão ou transação antes de
+executar consultas protegidas por RLS. O `tenant_id` recebido em parâmetros ou
+payload nunca deve substituir o tenant identificado pelo slug ou pelo JWT.
 
 ---
 
@@ -149,8 +127,8 @@ CREATE TABLE services (
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    duration_minutes INT NOT NULL,
-    price DECIMAL(10, 2),
+    duration_minutes INT NOT NULL CHECK (duration_minutes > 0),
+    price DECIMAL(10, 2) CHECK (price IS NULL OR price >= 0),
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -187,11 +165,17 @@ CREATE TABLE appointments (
     end_time TIMESTAMP WITH TIME ZONE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE'
         CHECK (status IN ('PENDENTE', 'CONFIRMADO', 'RECUSADO', 'CANCELADO', 'CONCLUIDO')),
+    CHECK (end_time > start_time),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 ```
+
+As referencias de `customer_id`, `service_id` e `professional_id` devem ser
+validadas para o mesmo `tenant_id` do agendamento. A migration tambem deve
+implementar a estrategia escolhida na Fase 0 para impedir conflitos de horario,
+inclusive quando duas solicitacoes chegam simultaneamente.
 
 ---
 
@@ -227,6 +211,8 @@ Transições de estado válidas aplicadas obrigatoriamente na camada de domínio
 
 - `CONFIRMADO` ➔ `CANCELADO` (Cancelamento prévio)
 
+- A politica para cancelamento de `PENDENTE` e reagendamento sera definida na Fase 0 do roadmap.
+
 ---
 
 ## 📱 6. Integração com WhatsApp
@@ -249,7 +235,7 @@ No MVP, a integração ocorre **client-side** via links profundos (`wa.me`), sem
 
 ## 📂 7. Estrutura de Pastas Sugerida
 
-### Backend (`/server`)
+### Backend (`/backend`)
 
 ```text
 src/
@@ -272,7 +258,7 @@ src/
 
 ```
 
-### Frontend (`/web`)
+### Frontend (`/frontend`)
 
 ```text
 src/
@@ -300,6 +286,8 @@ src/
 
 3. **Senhas:** Hashing obrigatório utilizando **Argon2id** ou **BCrypt**.
 4. **Validação de Inputs:** Todos os payloads de requisição devem ser parseados rigorosamente via esquemas **Zod** para evitar _SQL Injections_ e _Mass Assignment_.
+5. **Proteção das rotas públicas:** Rate limiting, validação de telefone e proteção contra criação abusiva de solicitações.
+6. **Isolamento:** Testes de RLS devem cobrir leitura, alteração e exclusão entre tenants.
 
 ---
 

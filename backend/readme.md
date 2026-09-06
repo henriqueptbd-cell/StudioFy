@@ -1,6 +1,9 @@
 # ⚙️ StudioFy — Backend (API REST)
 
-Este diretório contém a API REST em **Node.js** que alimenta a aplicação StudioFy. O backend é estruturado em camadas (Clean Architecture) e lida com autenticação, regras de transição do agendamento e isolamento multi-tenant.
+Este diretório contém a API REST em **Node.js** que alimentará a aplicação StudioFy. O backend seguirá uma arquitetura em camadas (Clean Architecture) e lidará com autenticação, regras de transição do agendamento e isolamento multi-tenant.
+
+O projeto ainda está na fase de documentação e fundação. A inicialização executável,
+a escolha do ORM e os scripts abaixo serão concluídos conforme o roadmap.
 
 ---
 
@@ -10,7 +13,7 @@ Este diretório contém a API REST em **Node.js** que alimenta a aplicação Stu
 - **TypeScript:** Tipagem estática end-to-end.
 - **Zod:** Validação e parsing de payloads de requisição no runtime.
 - **JWT (JSON Web Token):** Autenticação de Administradores e Profissionais.
-- **Drizzle ORM / Prisma:** Query Builder / ORM para interagir com o PostgreSQL.
+- **Drizzle ORM ou Prisma:** A escolha será feita na Fase 1 do roadmap.
 
 ---
 
@@ -18,10 +21,10 @@ Este diretório contém a API REST em **Node.js** que alimenta a aplicação Stu
 
 ```text
 src/
-├── @types/          # Tipagens globais do TypeScript (express request customizado)
+├── @types/          # Tipagens globais do TypeScript (Express Request customizado)
 ├── config/          # Variáveis de ambiente e secrets
 ├── modules/         # Módulos encapsulados por contexto
-│   ├── appointments/# Casos de uso e regras de agendamento
+│   ├── appointments/ # Casos de uso e regras de agendamento
 │   ├── customers/   # Cadastro/Consulta simples de clientes
 │   ├── services/    # Gestão dos serviços oferecidos
 │   ├── tenants/     # Dados e configurações do estabelecimento
@@ -35,14 +38,14 @@ src/
 
 ## 🚀 Como Executar
 
-1. Instale as dependências:
+1. Instale as dependências após a inicialização do projeto:
 
 ```bash
 npm install
 
 ```
 
-2. Configure as variáveis no `.env`:
+2. Configure as variáveis no `.env` a partir do `.env.example`:
 
 ```env
 PORT=3333
@@ -51,14 +54,20 @@ JWT_SECRET=sua_chave_secreta_aqui
 
 ```
 
-3. Execute as migrações do banco (veja a pasta `/database`):
+3. Execute as migrações do banco (comando oficial previsto):
 
 ```bash
 npm run db:migrate
 
 ```
 
-4. Inicie a API em modo de desenvolvimento:
+4. Popule os dados de desenvolvimento, quando necessário:
+
+```bash
+npm run db:seed
+```
+
+5. Inicie a API em modo de desenvolvimento:
 
 ```bash
 npm run dev

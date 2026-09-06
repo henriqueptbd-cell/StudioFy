@@ -1,121 +1,163 @@
-# 🗺️ Roadmap de Desenvolvimento do MVP — StudioFy
+# Roadmap de Desenvolvimento do MVP - StudioFy
 
-Este documento detalha as etapas, fases e tarefas necessárias para construir, testar e lançar a versão inicial (**MVP**) do StudioFy[cite: 1, 2].
+Este roadmap organiza o trabalho por dependencias e por entregas verificaveis. O MVP
+deve permitir que um cliente solicite um horario e que o estabelecimento confirme,
+recuse, conclua ou cancele o agendamento com seguranca entre tenants.
 
----
-
-## 📅 Visão Geral das Fases
+## Visao geral
 
 ```text
-  ┌───────────┐    ┌───────────┐    ┌───────────┐    ┌───────────┐    ┌───────────┐
-  │  FASE 1   │ ──>│  FASE 2   │ ──>│  FASE 3   │ ──>│  FASE 4   │ ──>│  FASE 5   │
-  │ Setup & DB│    │  Backend  │    │ Frontend  │    │  Deploy   │    │ Validação │
-  └───────────┘    └───────────┘    └───────────┘    └───────────┘    └───────────┘
-
+Decisoes do MVP
+  |
+  v
+Fundacao e banco
+  |
+  v
+Backend base e seguranca
+  |
+  v
+Primeiro fluxo completo (API + cliente)
+  |
+  v
+Painel administrativo
+  |
+  v
+Testes, endurecimento e deploy
 ```
 
----
+## FASE 0: Escopo e regras do MVP
 
-## 🛠️ FASE 1: Setup do Projeto & Banco de Dados
+> **Objetivo:** eliminar ambiguidades antes de implementar o calculo de horarios.
 
-> **Objetivo:** Criar a estrutura base de repositório, banco de dados PostgreSQL e migrações iniciais.
+- [ ] Confirmar o escopo: um estabelecimento, seus profissionais, servicos e agenda.
+- [ ] Definir o fuso horario do tenant e como datas serao armazenadas no banco.
+- [ ] Definir o intervalo dos slots (por exemplo, 15 ou 30 minutos).
+- [ ] Definir antecedencia minima, limite de dias futuros e horario de inicio da agenda.
+- [ ] Decidir se uma solicitacao `PENDENTE` bloqueia o horario temporariamente.
+- [ ] Definir se o MVP usa apenas horario do estabelecimento ou tambem disponibilidade individual do profissional.
+- [ ] Definir as regras de cancelamento e se havera reagendamento no MVP.
+- [ ] Escrever criterios de aceite para o fluxo principal e para cada transicao de status.
 
-- [ ] **1.1. Inicialização do Repositório**
-- [ ] Criar estrutura de pastas (`/frontend`, `/backend`, `/database`, `/docs`)
-- [ ] Adicionar `.gitignore` raiz e licença MIT
-- [ ] Adicionar `ARCHITECTURE.md` e os arquivos `README.md` de cada pasta
+## FASE 1: Fundacao do projeto
 
-- [ ] **1.2. Configuração do Neon Database (PostgreSQL)**
-- [ ] Criar projeto no Neon DB
-- [ ] Configurar variáveis de ambiente (`DATABASE_URL`) no backend
+> **Objetivo:** transformar a estrutura existente em um ambiente reproduzivel de desenvolvimento.
 
-- [ ] **1.3. Modelagem do Banco (Drizzle ORM ou Prisma)**
-- [ ] Criar schema da tabela `tenants` (id, name, slug, phone, logo_url, primary_color)
-- [ ] Criar schema da tabela `users` (id, tenant_id, name, email, password_hash, role)
-- [ ] Criar schema da tabela `services` (id, tenant_id, name, description, duration_minutes, price, active)
-- [ ] Criar schema da tabela `customers` (id, tenant_id, name, phone)
-- [ ] Criar schema da tabela `schedule_configs` (id, tenant_id, day_of_week, open_time, close_time, is_closed)
-- [ ] Criar schema da tabela `appointments` (id, tenant_id, customer_id, service_id, professional_id, start_time, end_time, status)
-- [ ] Gerar e executar a primeira Migration do banco de dados
+### 1.1. Base existente
 
----
+- [x] Criar as pastas `frontend`, `backend`, `database` e `docs`.
+- [x] Criar a documentacao inicial de produto, arquitetura e READMEs.
+- [x] Definir a stack inicial: React, Node.js, TypeScript, PostgreSQL, JWT e Zod.
 
-## ⚙️ FASE 2: Backend & Regras de Negócio (API REST)
+### 1.2. Configuracao tecnica
 
-> **Objetivo:** Desenvolver os endpoints públicos e privados garantindo validações e isolamento multi-tenant.
+- [ ] Escolher definitivamente entre Drizzle ORM e Prisma.
+- [ ] Inicializar os projetos do backend e frontend com scripts executaveis.
+- [ ] Adicionar `.gitignore`, `.env.example` e validacao das variaveis de ambiente.
+- [ ] Configurar formatacao, lint e verificacao de tipos.
+- [ ] Criar seed local com um tenant, um administrador, servicos e horarios.
+- [ ] Definir os comandos oficiais de instalar, migrar, popular, testar e iniciar o projeto.
 
-- [ ] **2.1. Infraestrutura do Backend**
-- [ ] Setup do Express + TypeScript + Zod
-- [ ] Criar middleware global de tratamento de erros (`AppError`)
-- [ ] Criar middleware de autenticação JWT (`ensureAuthenticated`)
-- [ ] Criar middleware de isolamento de tenant (`tenantMiddleware`)
+## FASE 2: Banco de dados e isolamento multi-tenant
 
-- [ ] **2.2. Módulo de Autenticação & Usuários**
-- [ ] Endpoint de Login para Admins/Profissionais (`POST /api/v1/auth/login`)
-- [ ] Endpoint de cadastro/gestão de profissionais pela Admin (`POST /api/v1/users`)
+> **Objetivo:** criar uma base consistente para as regras de negocio e impedir vazamento entre tenants.
 
-- [ ] **2.3. Módulo de Tenant & Configurações**
-- [ ] Endpoint público de busca de informações do Tenant pelo slug (`GET /api/v1/public/tenants/:slug`)
-- [ ] Endpoint administrativo para atualizar dados e cores do estabelecimento (`PATCH /api/v1/admin/tenant`)
-- [ ] Endpoint para cadastro de horários de funcionamento (`POST /api/v1/admin/schedules`)
+- [ ] Criar as tabelas `tenants`, `users`, `services`, `customers`, `schedule_configs` e `appointments`.
+- [ ] Adicionar timestamps, status, flags de ativacao, indices e constraints necessarios.
+- [ ] Garantir que cliente, servico e profissional de um agendamento pertencem ao mesmo tenant.
+- [ ] Definir as chaves estrangeiras e o comportamento de exclusao dos registros.
+- [ ] Criar migration inicial e um processo repetivel para aplica-la.
+- [ ] Configurar RLS e o contexto de tenant usado pelas conexoes do backend.
+- [ ] Testar leitura e escrita de um tenant tentando acessar dados de outro.
+- [ ] Definir a estrategia para impedir dois agendamentos conflitantes no mesmo horario.
 
-- [ ] **2.4. Módulo de Serviços**
-- [ ] CRUD de Serviços (Listar, Criar, Editar, Desativar)
+## FASE 3: Backend base e seguranca
 
-- [ ] **2.5. Módulo de Agendamentos (Core Domain)**
-- [ ] Algoritmo de cálculo de slots/horários livres (recebe a data e duração do serviço e retorna horários disponíveis)
-- [ ] Endpoint público de criação de solicitação (`POST /api/v1/public/appointments`) — Status inicial: `PENDENTE`
-- [ ] Máquina de Estados: Endpoint de confirmação (`PATCH /api/v1/admin/appointments/:id/confirm`)
-- [ ] Máquina de Estados: Endpoint de recusa (`PATCH /api/v1/admin/appointments/:id/reject`)
-- [ ] Máquina de Estados: Endpoint de conclusão (`PATCH /api/v1/admin/appointments/:id/complete`)
-- [ ] Endpoint de listagem da agenda do dia/semana para o profissional (`GET /api/v1/admin/appointments`)
+> **Objetivo:** disponibilizar uma API consistente, autenticada e validada.
 
----
+- [ ] Configurar Express, TypeScript, Zod, CORS e tratamento global de erros.
+- [ ] Implementar hash seguro de senhas e login com JWT de expiracao curta.
+- [ ] Implementar `ensureAuthenticated`, contexto de tenant e autorizacao por papel.
+- [ ] Aplicar rate limiting e validacao de entrada nas rotas publicas.
+- [ ] Criar o fluxo de provisionamento do primeiro administrador de um tenant.
+- [ ] Definir contratos de resposta e erros da API.
 
-## 📱 FASE 3: Frontend & Experiência do Usuário (React)
+## FASE 4: Primeiro fluxo completo de agendamento
 
-> **Objetivo:** Criar a interface mobile-first para o cliente agendar e a dashboard administrativa.
+> **Objetivo:** entregar uma fatia funcional de ponta a ponta antes de ampliar o painel.
 
-- [ ] **3.1. Setup do Frontend**
-- [ ] Inicialização com Vite + React + TypeScript + Tailwind CSS
-- [ ] Setup do TanStack Query (React Query) e React Router Dom
-- [ ] Configurar sistema de temas dinâmicos via CSS Variables (`--primary-color`)
+### 4.1. API publica
 
-- [ ] **3.2. Fluxo Público de Agendamento (Mobile-First)**
-- [ ] Tela 1: Visualização do Estabelecimento + Escolha do Serviço
-- [ ] Tela 2: Seleção de Data e Horário (Calendário/Slots disponíveis)
-- [ ] Tela 3: Formulário mínimo (Nome + Telefone)
-- [ ] Tela 4: Confirmação do envio da solicitação (Aguardando aprovação)
+- [ ] Buscar dados publicos do tenant pelo slug.
+- [ ] Listar servicos ativos do tenant.
+- [ ] Consultar horarios disponiveis para uma data e um servico.
+- [ ] Validar nome, telefone, servico, data, horario e limite de antecedencia.
+- [ ] Criar solicitacao publica com status inicial `PENDENTE`.
+- [ ] Fazer a criacao de forma atomica, rejeitando conflitos mesmo sob concorrencia.
 
-- [ ] **3.3. Área Autenticada (Login & Dashboard Admin/Profissional)**
-- [ ] Tela de Login (`/login`)
-- [ ] Painel da Agenda (Visão de lista/cards por data com filtros de status)
-- [ ] Ações rápidas nos Cards de Agendamento (Confirmar / Recusar / Concluir)
-- [ ] Utilitário de WhatsApp: Botão que abre o link `wa.me` com mensagem pré-formatada de confirmação
-- [ ] Tela de Gestão de Serviços (Adicionar/Editar preço e duração)
-- [ ] Tela de Configurações da Loja (Nome, Logo, Cor Primária, Horários de Funcionamento)
+### 4.2. API autenticada minima
 
----
+- [ ] Listar a agenda por dia e semana, respeitando o papel do usuario.
+- [ ] Confirmar solicitacao: `PENDENTE` -> `CONFIRMADO`.
+- [ ] Recusar solicitacao: `PENDENTE` -> `RECUSADO`.
+- [ ] Cancelar agendamento conforme a regra definida na Fase 0.
+- [ ] Concluir atendimento: `CONFIRMADO` -> `CONCLUIDO`.
+- [ ] Rejeitar transicoes de status invalidas na camada de dominio.
 
-## 🚀 FASE 4: Testes, Refinamento & Deploy
+## FASE 5: Frontend publico
 
-> **Objetivo:** Garantir a estabilidade da aplicação e colocar o MVP no ar.
+> **Objetivo:** permitir que o cliente complete o fluxo sem criar conta.
 
-- [ ] **4.1. Testes & Qualidade**
-- [ ] Testar cenários de concorrência (dois agendamentos no mesmo horário)
-- [ ] Validar responsividade em dispositivos mobile reais (iOS/Android)
-- [ ] Garantir que o isolamento RLS do Postgres impede que um Tenant acesse dados de outro
+- [ ] Inicializar Vite, React, TypeScript, Tailwind, TanStack Query e React Router.
+- [ ] Configurar tema do tenant por CSS Variables.
+- [ ] Exibir estabelecimento e servicos ativos.
+- [ ] Permitir selecionar data e horario realmente disponivel.
+- [ ] Solicitar apenas nome e telefone.
+- [ ] Exibir sucesso, erro, horario indisponivel e solicitacao duplicada.
+- [ ] Validar o fluxo em telas pequenas e em conexoes lentas.
 
-- [ ] **4.2. Deploy**
-- [ ] Deploy do Backend (Render / Railway / Fly.io)
-- [ ] Deploy do Frontend (Vercel / Netlify)
-- [ ] Configuração do banco de dados de produção no Neon DB
+## FASE 6: Painel administrativo
 
----
+> **Objetivo:** dar ao estabelecimento as ferramentas necessarias para operar a agenda.
 
-## 📌 Próximos Passos Pós-MVP (Backlog Futuro)
+- [ ] Criar login e protecao das rotas privadas.
+- [ ] Exibir agenda com filtros por data, status e profissional.
+- [ ] Implementar confirmar, recusar, cancelar e concluir.
+- [ ] Gerar link `wa.me` com mensagem de confirmacao.
+- [ ] Criar CRUD de servicos, incluindo ativar e desativar.
+- [ ] Criar gestao de profissionais, incluindo ativar e desativar.
+- [ ] Criar configuracao do tenant e horarios de funcionamento.
+- [ ] Criar consulta de clientes vinculados ao tenant, sem expor dados de outros tenants.
 
-- [ ] Notificações automáticas via API oficial do WhatsApp
-- [ ] Pagamentos online de sinal/reserva no momento do agendamento
-- [ ] Escolha de profissional específico pelo cliente
-- [ ] Histórico detalhado de clientes e relatórios financeiros
+## FASE 7: Testes e endurecimento
+
+> **Objetivo:** validar comportamento, seguranca e operacao antes do deploy.
+
+- [ ] Testar regras de dominio e todas as transicoes de status.
+- [ ] Testar endpoints com sucesso, validacao, autorizacao e erro.
+- [ ] Testar dois pedidos concorrentes para o mesmo horario.
+- [ ] Testar RLS e isolamento em consultas, atualizacoes e exclusoes.
+- [ ] Testar o fluxo principal com um teste E2E.
+- [ ] Validar responsividade em dispositivos mobile reais ou emuladores.
+- [ ] Revisar logs, mensagens de erro, CORS, rate limiting e segredos.
+- [ ] Revisar acessibilidade basica, estados de carregamento e estados vazios.
+
+## FASE 8: Deploy e operacao
+
+> **Objetivo:** publicar uma versao reproduzivel e observavel do MVP.
+
+- [ ] Criar banco de producao no Neon e aplicar migrations.
+- [ ] Configurar variaveis de ambiente sem expor segredos no repositorio.
+- [ ] Publicar o backend e configurar health check, logs e CORS.
+- [ ] Publicar o frontend e configurar a URL da API.
+- [ ] Configurar dominio, HTTPS e politica de origem permitida.
+- [ ] Executar smoke test do fluxo principal em producao.
+- [ ] Documentar rollback, backup e procedimento de restauracao.
+
+## Backlog pos-MVP
+
+- [ ] Notificacoes automaticas via API oficial do WhatsApp.
+- [ ] Pagamentos online de sinal ou reserva.
+- [ ] Escolha de profissional pelo cliente.
+- [ ] Disponibilidade individual por profissional.
+- [ ] Reagendamento pelo cliente.
+- [ ] Historico detalhado e relatorios financeiros.

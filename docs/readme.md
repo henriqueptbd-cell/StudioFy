@@ -6,6 +6,7 @@ Esta pasta centraliza os documentos de produto, decisões de arquitetura e guias
 
 ## 📄 Documentos Disponíveis
 
-- 🏛️ **[ARCHITECTURE.md](../ARCHITECTURE.md):** Visão arquitetural detalhada, diagrama de entidades, fluxo de estados dos agendamentos e stack técnica.
-- 📋 **[PRODUCT_VISION.md](./PRODUCT_VISION.md):** Visão geral do produto, definição do MVP, personas, regras de negócios e escopo funcional.
-- 🔐 **[SECURITY_AND_PRIVACY.md](./SECURITY_AND_PRIVACY.md):** Diretrizes sobre LGPD, minimização de dados do cliente e autenticação JWT.
+- 🏛️ **[ARCHITECTURE.md](./ARCHITECTURE.md):** Visão arquitetural detalhada, modelo de dados, fluxo de estados e stack técnica.
+- 📋 **[visao_do_produto.md](./visao_do_produto.md):** Visão do produto, personas, regras de negócio e escopo funcional.
+- 🔐 **[SECURITY_AND_PRIVACY.md](./SECURITY_AND_PRIVACY.md):** Requisitos de segurança, isolamento multi-tenant, privacidade e LGPD.
+- 🗺️ **[ROADMAP.md](./ROADMAP.md):** Ordem de implementação, critérios de validação e backlog pós-MVP.

@@ -1,6 +1,11 @@
 # 📱 StudioFy — Frontend
 
-Este diretório contém a aplicação web client-side do **StudioFy**, desenvolvida com foco na experiência **Mobile-first** e separação clara entre a interface pública do cliente e o painel administrativo.
+Este diretório contém a aplicação web client-side do **StudioFy**, que será
+desenvolvida com foco na experiência **Mobile-first** e separação clara entre a
+interface pública do cliente e o painel administrativo.
+
+O projeto ainda está na fase de documentação e fundação. A inicialização executável
+com Vite e os scripts abaixo serão concluídos conforme o roadmap.
 
 ---
 
@@ -35,14 +40,14 @@ src/
 
 ## 🚀 Como Executar
 
-1. Instale as dependências:
+1. Instale as dependências após a inicialização do projeto:
 
 ```bash
 npm install
 
 ```
 
-2. Configure o arquivo `.env`:
+2. Configure o arquivo `.env` a partir do `.env.example`:
 
 ```env
 VITE_API_URL=http://localhost:3333/api/v1

@@ -139,6 +139,9 @@ Poderá:
 - consultar informações relacionadas ao próprio agendamento por mecanismos que forem definidos posteriormente;
 - utilizar links para comunicação via WhatsApp.
 
+Consulta pública do próprio agendamento e reagendamento não fazem parte do escopo
+inicial. Serão avaliados no backlog pós-MVP.
+
 O cliente não terá acesso à agenda completa do estabelecimento nem aos dados de outros clientes.
 
 ### 5.2 Profissional
@@ -237,6 +240,9 @@ A distribuição do atendimento ficará sob responsabilidade do estabelecimento.
 
 Isso também permite que o sistema evolua posteriormente para regras mais sofisticadas de distribuição de agenda, caso sejam necessárias.
 
+No MVP, a disponibilidade individual por profissional fica fora do fluxo público
+até que essa regra seja definida. O roadmap trata essa decisão na Fase 0.
+
 ---
 
 ## 8. Serviços
@@ -315,6 +321,11 @@ O banco será responsável pelos dados de negócio da aplicação.
 A autenticação será necessária para profissionais e administradores, enquanto o cliente final não terá autenticação obrigatória no MVP.
 
 A modelagem deverá considerar o estabelecimento como uma entidade central, permitindo isolamento dos dados entre diferentes estabelecimentos.
+
+Antes da implementação, ainda precisam ser definidas as regras de fuso horário,
+intervalo dos slots, antecedência mínima, limite de dias futuros, bloqueio de
+solicitações pendentes e prevenção de conflitos concorrentes. Essas decisões são
+pré-requisitos da Fase 0 do roadmap.
 
 ---
 
@@ -493,29 +504,29 @@ A evolução deverá ser guiada pelas necessidades reais dos estabelecimentos e 
 
 ## 17. Decisões Atuais
 
-| Item | Decisão |
-|---|---|
-| Nome | **StudioFy** |
-| Modelo | Plataforma escalável |
-| Público inicial | Salões, barbearias e estética |
-| Cliente | Sem cadastro obrigatório |
-| Dados do cliente | Nome + telefone inicialmente |
-| Profissional | Possui acesso autenticado |
-| Administrador | Possui acesso administrativo |
-| Profissional escolhida pelo cliente | Não |
-| Serviços | Cadastrados pelo estabelecimento |
-| Personalização | Nome, logo, cores e configurações |
-| Banco | PostgreSQL |
-| Provider | Neon Database |
-| Frontend | React + TypeScript |
-| Backend | Node.js + TypeScript |
-| API | REST |
-| WhatsApp | Links `wa.me` |
-| WhatsApp API | Fora do MVP |
-| Mobile | Mobile-first |
-| Multi-estabelecimento | Princípio arquitetural desde o início |
-| Firebase | Fora da arquitetura atual |
-| Cliente autenticado | Fora do MVP |
+| Item                                | Decisão                               |
+| ----------------------------------- | ------------------------------------- |
+| Nome                                | **StudioFy**                          |
+| Modelo                              | Plataforma escalável                  |
+| Público inicial                     | Salões, barbearias e estética         |
+| Cliente                             | Sem cadastro obrigatório              |
+| Dados do cliente                    | Nome + telefone inicialmente          |
+| Profissional                        | Possui acesso autenticado             |
+| Administrador                       | Possui acesso administrativo          |
+| Profissional escolhida pelo cliente | Não                                   |
+| Serviços                            | Cadastrados pelo estabelecimento      |
+| Personalização                      | Nome, logo, cores e configurações     |
+| Banco                               | PostgreSQL                            |
+| Provider                            | Neon Database                         |
+| Frontend                            | React + TypeScript                    |
+| Backend                             | Node.js + TypeScript                  |
+| API                                 | REST                                  |
+| WhatsApp                            | Links `wa.me`                         |
+| WhatsApp API                        | Fora do MVP                           |
+| Mobile                              | Mobile-first                          |
+| Multi-estabelecimento               | Princípio arquitetural desde o início |
+| Firebase                            | Fora da arquitetura atual             |
+| Cliente autenticado                 | Fora do MVP                           |
 
 ---
 

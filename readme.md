@@ -19,7 +19,7 @@ O repositório é organizado de forma modular para separação clara de responsa
 
 ```
 
-Para detalhes sobre as decisões técnicas e padrões de código, consulte o [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
+Para detalhes sobre as decisões técnicas e padrões de código, consulte o [ARCHITECTURE.md](./docs/ARCHITECTURE.md). Os requisitos de segurança estão no [SECURITY_AND_PRIVACY.md](./docs/SECURITY_AND_PRIVACY.md), e o planejamento executável está no [ROADMAP.md](./docs/ROADMAP.md).
 
 ---
 
@@ -27,7 +27,7 @@ Para detalhes sobre as decisões técnicas e padrões de código, consulte o [AR
 
 - **Frontend:** React, TypeScript, Tailwind CSS, TanStack Query (React Query)
 - **Backend:** Node.js, Express, TypeScript, Zod, JWT
-- **Database:** PostgreSQL (Neon DB), Drizzle ORM / Prisma
+- **Database:** PostgreSQL (Neon DB), com Drizzle ORM ou Prisma a definir na Fase 1
 - **Comunicação:** Integração via links dinâmicos do WhatsApp (`wa.me`)
 
 ---
@@ -51,7 +51,7 @@ cd studiofy
 ```
 
 2. **Configurar o Banco de Dados:**
-   Consulte as instruções em [`/database/README.md`](https://www.google.com/search?q=./database/README.md).
+   Consulte as instruções em [database/readme.md](./database/readme.md). Os scripts oficiais serão definidos na Fase 1.
 3. **Executar o Backend:**
 
 ```bash
@@ -61,7 +61,9 @@ npm run dev
 
 ```
 
-_Instruções detalhadas em [`/backend/README.md`](https://www.google.com/search?q=./backend/README.md)._ 4. **Executar o Frontend:**
+Instruções detalhadas em [backend/readme.md](./backend/readme.md).
+
+4. **Executar o Frontend:**
 
 ```bash
 cd ../frontend
@@ -70,7 +72,7 @@ npm run dev
 
 ```
 
-_Instruções detalhadas em [`/frontend/README.md`](https://www.google.com/search?q=./frontend/README.md)._
+Instruções detalhadas em [frontend/readme.md](./frontend/readme.md).
 
 ---
 
@@ -82,6 +84,6 @@ _Instruções detalhadas em [`/frontend/README.md`](https://www.google.com/searc
 
 ---
 
-## 📄 Licença
+## 📄 Documentação
 
-Este projeto está sob a licença [MIT](./LICENSE).
+As decisões e tarefas pendentes estão registradas em [docs/ROADMAP.md](./docs/ROADMAP.md).
