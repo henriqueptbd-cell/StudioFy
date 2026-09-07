@@ -10,4 +10,5 @@ Esta pasta centraliza os documentos de produto, decisões de arquitetura e guias
 - 📋 **[visao_do_produto.md](./visao_do_produto.md):** Visão do produto, personas, regras de negócio e escopo funcional.
 - 🔐 **[SECURITY_AND_PRIVACY.md](./SECURITY_AND_PRIVACY.md):** Requisitos de segurança, isolamento multi-tenant, privacidade e LGPD.
 - 🧪 **[TESTING.md](./TESTING.md):** Estratégia, comandos e cobertura atual dos testes.
+- 🌐 **[API_SPECIFICATION.md](./API_SPECIFICATION.md):** Catálogo de rotas, contratos, papéis e respostas da API.
 - 🗺️ **[ROADMAP.md](./ROADMAP.md):** Ordem de implementação, critérios de validação e backlog pós-MVP.

@@ -7,7 +7,12 @@ const createAppointmentSchema = z.object({
     startTime: z.string().datetime('Data/Hora deve estar em formato ISO (UTC)'),
     customer: z.object({
         name: z.string().min(2, 'Nome do cliente é obrigatório'),
-        phone: z.string().min(10, 'Telefone inválido'),
+        phone: z
+            .string()
+            .transform((val) => val.replace(/\D/g, '')) // Remove caracteres não numéricos
+            .refine((val) => val.length >= 10 && val.length <= 11, {
+                message: 'Telefone deve conter DDD e ter 10 ou 11 dígitos',
+            }),
     }),
 });
 

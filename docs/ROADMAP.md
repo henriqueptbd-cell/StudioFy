@@ -122,7 +122,7 @@ Testes, endurecimento e deploy
 
 ### 4.2. API autenticada minima
 
-- [ ] Listar a agenda por dia e semana, respeitando o papel do usuario.
+- [x] Listar a agenda por dia e semana, respeitando o papel do usuario.
 - [x] Confirmar solicitacao: `PENDENTE` -> `CONFIRMADO`.
 - [x] Rejeitar transicao invalida: `CONFIRMADO` -> `RECUSADO`.
 - [ ] Cancelar agendamento conforme a regra definida na Fase 0.
@@ -136,6 +136,7 @@ Testes, endurecimento e deploy
 - [ ] Aceitar somente nome e telefone valido com DDD no formulario publico.
 - [x] Criar novos pedidos com status `PENDENTE` e registrar `expires_at`.
 - [x] Confirmar bloqueia o intervalo; transicoes invalidas sao rejeitadas.
+- [x] Listar a agenda do tenant com dados do cliente, servico e link de WhatsApp.
 - [ ] Expirar `PENDENTE` libera o horario e altera o status para `CANCELADO`.
 - [ ] Concluir apenas registra o historico e nao altera disponibilidade futura.
 - [ ] Cancelar um agendamento libera o intervalo para novas solicitacoes.

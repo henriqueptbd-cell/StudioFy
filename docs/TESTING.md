@@ -49,7 +49,7 @@ Ele cobre o fluxo integrado da Fase 3:
 - rejeicao de rota protegida sem token;
 - acesso de rota protegida com token valido.
 
-A suite atual foi executada com sucesso: **4 arquivos de teste e 20 testes aprovados**.
+A suite atual foi executada com sucesso: **4 arquivos de teste e 22 testes aprovados**.
 
 ## O que este teste garante
 
@@ -86,6 +86,7 @@ Os testes abaixo ja foram executados com sucesso na role restrita da aplicacao:
 - [x] Rejeitar agendamento duplicado no mesmo slot.
 - [x] Confirmar agendamento: `PENDENTE` -> `CONFIRMADO`.
 - [x] Rejeitar transicao invalida: `CONFIRMADO` -> `RECUSADO`.
+- [x] Listar a agenda autenticada com dados do cliente e link `wa.me`.
 - [ ] Revisar conversao completa de timezone IANA no calculo de slots.
 - [x] Rejeitar duplicidade e sobreposicao com `PENDENTE` ou `CONFIRMADO`.
 - [ ] Expirar `PENDENTE` no prazo correto.

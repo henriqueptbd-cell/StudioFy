@@ -7,13 +7,41 @@ A API é dividida em dois grandes contextos:
 1. **Pública (`/api/v1/public`)**: Acessível pelo cliente final para realizar agendamentos sem necessidade de autenticação.
 2. **Administrativa (`/api/v1/admin` e `/api/v1/auth`)**: Acessível apenas por administradores e profissionais autenticados via JWT.
 
+## Organização das rotas
+
+As rotas são separadas por contexto no backend:
+
+- `backend/src/routes/auth.routes.ts`: login e provisionamento inicial.
+- `backend/src/routes/public.routes.ts`: tenant, serviços, slots e solicitações públicas.
+- `backend/src/routes/admin.routes.ts`: agenda, serviços, transições de status e expiração.
+- `backend/src/routes/index.ts`: apenas compõe os routers.
+
+Essa separação evita concentrar autenticação, rotas públicas e operações
+administrativas no mesmo arquivo. Os caminhos HTTP continuam sob `/api/v1`.
+
+### Regras gerais
+
+- Rotas públicas usam `publicRateLimiter`.
+- Rotas administrativas exigem `Authorization: Bearer <JWT_TOKEN>`.
+- O JWT informa `tenantId` e `role`; o backend estabelece o contexto RLS antes das operações no banco.
+- `ADMIN` pode gerenciar serviços e alterar status de agendamentos.
+- `PROFESSIONAL` pode consultar a agenda; ações administrativas devem respeitar a autorização da rota.
+- Erros seguem `{ success: false, error: { code, message } }`.
+
 ---
 
-## 🟢 1. Rotas de Autenticação (`/api/v1/auth`)
+## 🟢 1. Rotas de Autenticação e Provisionamento
 
-### 1.1 `POST /login`
+### 1.1 `POST /api/v1/public/tenants/provision`
 
-Realiza a autenticação de profissionais e administradores.
+Cria um tenant e seu primeiro administrador. Retorna um JWT inicial.
+
+- **Acesso:** Público, com rate limiting.
+
+### 1.2 `POST /api/v1/auth/login`
+
+Realiza a autenticação de profissionais e administradores. O `tenantSlug` é
+obrigatório para que o usuário seja buscado dentro do tenant correto.
 
 - **Acesso:** Público
 - **Request Body:**
@@ -50,7 +78,7 @@ Realiza a autenticação de profissionais e administradores.
 
 Todas as rotas públicas dependem do `slug` do estabelecimento na URL.
 
-### 2.1 `GET /tenants/:slug`
+### 2.1 `GET /api/v1/public/tenants/:slug`
 
 Retorna as informações públicas e identidade visual do estabelecimento.
 
@@ -70,7 +98,7 @@ Retorna as informações públicas e identidade visual do estabelecimento.
 }
 ```
 
-### 2.2 `GET /tenants/:slug/services`
+### 2.2 `GET /api/v1/public/tenants/:slug/services`
 
 Lista os serviços ativos oferecidos pelo estabelecimento.
 
@@ -91,7 +119,7 @@ Lista os serviços ativos oferecidos pelo estabelecimento.
 }
 ```
 
-### 2.3 `GET /tenants/:slug/slots?date=YYYY-MM-DD&serviceId=UUID`
+### 2.3 `GET /api/v1/public/tenants/:slug/slots?date=YYYY-MM-DD&serviceId=UUID`
 
 Retorna os horários disponíveis para agendamento em um determinado dia.
 
@@ -111,7 +139,7 @@ Retorna os horários disponíveis para agendamento em um determinado dia.
 }
 ```
 
-### 2.4 `POST /tenants/:slug/appointments`
+### 2.4 `POST /api/v1/public/tenants/:slug/appointments`
 
 Cria uma nova solicitação de agendamento.
 
@@ -149,7 +177,7 @@ Cria uma nova solicitação de agendamento.
 
 Requer cabeçalho HTTP: `Authorization: Bearer <JWT_TOKEN>`.
 
-### 3.1 `GET /appointments`
+### 3.1 `GET /api/v1/admin/appointments`
 
 Lista a agenda do estabelecimento com suporte a filtros de data e status.
 
@@ -179,7 +207,7 @@ Lista a agenda do estabelecimento com suporte a filtros de data e status.
 }
 ```
 
-### 3.2 `PATCH /appointments/:id/status`
+### 3.2 `PATCH /api/v1/admin/appointments/:id/status`
 
 Altera o status de um agendamento (Confirmar, Recusar, Cancelar, Concluir).
 
@@ -204,7 +232,7 @@ Altera o status de um agendamento (Confirmar, Recusar, Cancelar, Concluir).
 }
 ```
 
-### 3.3 `POST /services`
+### 3.3 `POST /api/v1/admin/services`
 
 Cadastra um novo serviço no estabelecimento.
 
@@ -216,6 +244,27 @@ Cadastra um novo serviço no estabelecimento.
   "description": "Com aplicação de henna",
   "durationMinutes": 30,
   "price": 45.0
+}
+```
+
+### 3.4 `GET /api/v1/admin/dashboard`
+
+Rota protegida usada para validar autenticação, autorização de administrador e
+contexto do tenant.
+
+- **Acesso:** `ADMIN`.
+
+### 3.5 `POST /api/v1/admin/appointments/expire`
+
+Executa manualmente a rotina que cancela solicitações `PENDENTE` expiradas.
+
+- **Acesso:** `ADMIN`.
+- **Response:** quantidade de agendamentos expirados.
+
+```json
+{
+  "success": true,
+  "data": { "expiredCount": 1 }
 }
 ```
 

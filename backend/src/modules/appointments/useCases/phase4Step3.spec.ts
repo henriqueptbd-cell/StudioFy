@@ -100,4 +100,32 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
         expect(response.body.success).toBe(false);
         expect(response.body.error.code).toBe('INVALID_STATUS_TRANSITION');
     });
+
+    it('5. [ADMIN] Deve listar a agenda do tenant com link wa.me (200 OK)', async () => {
+        const response = await request(app)
+            .get(`/api/v1/admin/appointments`)
+            .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(Array.isArray(response.body.data)).toBe(true);
+        expect(response.body.data).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    whatsappLink: expect.stringContaining('wa.me/5511988887777'),
+                }),
+            ]),
+        );
+    });
+
+    it('6. [ADMIN] Deve concluir atendimento CONFIRMADO -> CONCLUIDO (200 OK)', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/admin/appointments/${appointmentId}/status`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ status: 'CONCLUIDO' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe('CONCLUIDO');
+    });
 });

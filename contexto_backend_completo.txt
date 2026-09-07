@@ -1,0 +1,1894 @@
+]633;E;{ echo "=== ESTRUTURA E CONTEÚDO DO BACKEND (EXCLUINDO .GITIGNORE) ==="\x3b git ls-files backend/src | while read -r file\x3b do if [ -f "$file" ]\x3b then echo -e "\\n\\n--- FILE: $file ---\\n"\x3b cat "$file"\x3b fi\x3b done\x3b } > contexto_backend_completo.txt;f3e48420-1eda-4d8a-b380-2e7a518d7aac]633;C=== ESTRUTURA E CONTEÚDO DO BACKEND (EXCLUINDO .GITIGNORE) ===
+
+
+--- FILE: backend/src/@types/express.d.ts ---
+
+import 'express';
+
+declare global {
+    namespace Express {
+        export interface Request {
+            user?: {
+                id: string;
+                tenantId: string;
+                role: 'ADMIN' | 'PROFESSIONAL';
+            };
+        }
+    }
+}
+
+--- FILE: backend/src/config/env.ts ---
+
+import 'dotenv/config';
+import { z } from 'zod';
+
+const envSchema = z.object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().positive().default(3333),
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL e obrigatoria'),
+    MIGRATION_DATABASE_URL: z.string().min(1).optional(),
+    JWT_SECRET: z.string().min(32, 'JWT_SECRET deve possuir pelo menos 32 caracteres'),
+    JWT_EXPIRES_IN: z.string().default('15m'), // <--- ADICIONE APENAS ESTA LINHA
+    FRONTEND_URL: z.string().url().default('http://localhost:5173'),
+});
+
+export const env = envSchema.parse(process.env);
+
+--- FILE: backend/src/db/client.ts ---
+
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { sql } from 'drizzle-orm';
+import pg from 'pg';
+import { env } from '../config/env.js';
+import * as schema from './schema.js';
+
+const { Pool } = pg;
+
+export const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const db = drizzle(pool, { schema });
+
+// Exporta o tipo nativo de transação do Drizzle
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function withTenant<T>(
+    tenantId: string,
+    fn: (tx: DbTransaction) => Promise<T>
+): Promise<T> {
+    // A própria transação do Drizzle cuida do BEGIN, COMMIT, ROLLBACK e release da conexão
+    return db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`);
+        return fn(tx);
+    });
+}
+
+--- FILE: backend/src/db/isolation-test.ts ---
+
+import { db, pool } from './client.js';
+import { tenants, users } from './schema.js';
+import { eq } from 'drizzle-orm';
+
+async function testIsolation() {
+  // Criar 2 tenants e garantir o retorno dos IDs
+  const insertedT1 = await db.insert(tenants).values({ name: 'T1', slug: 't1', phone: '1' }).returning();
+  const insertedT2 = await db.insert(tenants).values({ name: 'T2', slug: 't2', phone: '2' }).returning();
+
+  const t1 = insertedT1[0];
+  const t2 = insertedT2[0];
+
+  // Checagem de segurança caso a inserção falhe
+  if (!t1 || !t2) {
+    throw new Error('Falha ao inserir tenants: t1 ou t2 retornou undefined.');
+  }
+
+  await db.insert(users).values([
+    { tenantId: t1.id, name: 'U1', email: 'u1@t1', passwordHash: 'x', role: 'ADMIN' },
+    { tenantId: t2.id, name: 'U2', email: 'u2@t2', passwordHash: 'x', role: 'ADMIN' },
+  ]);
+
+  const usersT1 = await db.select().from(users).where(eq(users.tenantId, t1.id));
+  const usersT2 = await db.select().from(users).where(eq(users.tenantId, t2.id));
+
+  console.log('Isolation test:', usersT1.length === 1 && usersT2.length === 1 ? 'PASS' : 'FAIL');
+
+  await pool.end();
+}
+
+testIsolation()
+  .catch((err) => console.error('Isolation test error:', err))
+  .finally(() => process.exit());
+
+--- FILE: backend/src/db/migrate.ts ---
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
+import { env } from '../config/env.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const databaseDir = resolve(__dirname, '../../../database');
+const { Pool } = pg;
+const migrationPool = new Pool({ connectionString: env.MIGRATION_DATABASE_URL ?? env.DATABASE_URL });
+const migrationDb = drizzle(migrationPool);
+
+await migrate(migrationDb, { migrationsFolder: './drizzle' });
+
+const rlsSql = readFileSync(resolve(databaseDir, 'rls.sql'), 'utf8');
+const constraintsSql = readFileSync(resolve(databaseDir, 'constraints.sql'), 'utf8');
+
+await migrationDb.execute(rlsSql);
+await migrationDb.execute(constraintsSql);
+
+await migrationPool.end();
+
+
+--- FILE: backend/src/db/schema.ts ---
+
+import {
+    boolean,
+    index,
+    integer,
+    numeric,
+    pgTable,
+    text,
+    time,
+    timestamp,
+    uniqueIndex,
+    uuid,
+    varchar,
+} from 'drizzle-orm/pg-core';
+
+// 1. Tenants (Estabelecimentos)
+export const tenants = pgTable('tenants', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 100 }).notNull().unique(),
+    phone: varchar('phone', { length: 20 }).notNull(),
+    timezone: varchar('timezone', { length: 64 }).notNull().default('America/Sao_Paulo'),
+    logoUrl: text('logo_url'),
+    primaryColor: varchar('primary_color', { length: 7 }).notNull().default('#000000'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// 2. Users (Profissionais / Admins)
+export const users = pgTable(
+    'users',
+    {
+        id: uuid('id').defaultRandom().primaryKey(),
+        tenantId: uuid('tenant_id')
+            .notNull()
+            .references(() => tenants.id, { onDelete: 'cascade' }),
+        name: varchar('name', { length: 255 }).notNull(),
+        email: varchar('email', { length: 255 }).notNull(),
+        passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+        role: varchar('role', { length: 20 }).notNull(),
+        active: boolean('active').notNull().default(true),
+        createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+        updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => [
+        uniqueIndex('uk_users_tenant_email').on(table.tenantId, table.email),
+    ]
+);
+
+// 3. Services (Serviços)
+export const services = pgTable('services', {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id')
+        .notNull()
+        .references(() => tenants.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    durationMinutes: integer('duration_minutes').notNull(),
+    price: numeric('price', { precision: 10, scale: 2 }),
+    active: boolean('active').notNull().default(true),
+});
+
+// 4. Schedule Configs (Horários de Funcionamento)
+export const scheduleConfigs = pgTable(
+    'schedule_configs',
+    {
+        id: uuid('id').defaultRandom().primaryKey(),
+        tenantId: uuid('tenant_id')
+            .notNull()
+            .references(() => tenants.id, { onDelete: 'cascade' }),
+        dayOfWeek: integer('day_of_week').notNull(),
+        openTime: time('open_time').notNull(),
+        closeTime: time('close_time').notNull(),
+        isClosed: boolean('is_closed').notNull().default(false),
+    },
+    (table) => [
+        uniqueIndex('uk_schedule_tenant_day').on(table.tenantId, table.dayOfWeek),
+    ]
+);
+
+// 5. Customers (Clientes)
+export const customers = pgTable(
+    'customers',
+    {
+        id: uuid('id').defaultRandom().primaryKey(),
+        tenantId: uuid('tenant_id')
+            .notNull()
+            .references(() => tenants.id, { onDelete: 'cascade' }),
+        name: varchar('name', { length: 255 }).notNull(),
+        phone: varchar('phone', { length: 20 }).notNull(),
+        createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => [
+        uniqueIndex('uk_customers_tenant_phone').on(table.tenantId, table.phone),
+    ]
+);
+
+// 6. Appointments (Agendamentos)
+export const appointments = pgTable(
+    'appointments',
+    {
+        id: uuid('id').defaultRandom().primaryKey(),
+        tenantId: uuid('tenant_id')
+            .notNull()
+            .references(() => tenants.id, { onDelete: 'cascade' }),
+        customerId: uuid('customer_id')
+            .notNull()
+            .references(() => customers.id, { onDelete: 'cascade' }),
+        serviceId: uuid('service_id')
+            .notNull()
+            .references(() => services.id, { onDelete: 'cascade' }),
+        professionalId: uuid('professional_id').references(() => users.id, { onDelete: 'set null' }),
+        startTime: timestamp('start_time', { withTimezone: true }).notNull(),
+        endTime: timestamp('end_time', { withTimezone: true }).notNull(),
+        status: varchar('status', { length: 20 }).notNull().default('PENDENTE'),
+        expiresAt: timestamp('expires_at', { withTimezone: true }),
+        createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+        updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    },
+    (table) => [
+        index('idx_appointments_tenant_time').on(table.tenantId, table.startTime, table.endTime),
+        index('idx_appointments_tenant_status').on(table.tenantId, table.status, table.startTime),
+    ]
+);
+
+--- FILE: backend/src/db/seed.ts ---
+
+import { eq } from 'drizzle-orm';
+import { db, pool, withTenant } from './client.js';
+import { scheduleConfigs, services, tenants, users, customers } from './schema.js';
+
+const [tenant] = await db
+    .insert(tenants)
+    .values({
+        name: 'StudioFy Demo',
+        slug: 'studiofy-demo',
+        phone: '5511999999999',
+        timezone: 'America/Sao_Paulo',
+        primaryColor: '#111827',
+    })
+    .onConflictDoNothing({ target: tenants.slug })
+    .returning();
+
+const [existingTenant] = tenant
+    ? [tenant]
+    : await db.select().from(tenants).where(eq(tenants.slug, 'studiofy-demo')).limit(1);
+
+if (!existingTenant) {
+    throw new Error('Nao foi possivel criar ou localizar o tenant de seed.');
+}
+
+await withTenant(existingTenant.id, async (tx) => {
+    await tx.insert(users).values({
+        tenantId: existingTenant.id,
+        name: 'Administrador Demo',
+        email: 'admin@studiofy.local',
+        passwordHash: 'REPLACE_WITH_HASH_IN_AUTH_SETUP',
+        role: 'ADMIN',
+    });
+
+    await tx.insert(customers).values([
+        { tenantId: existingTenant.id, name: 'Maria Silva', phone: '5511999999999' },
+        { tenantId: existingTenant.id, name: 'Joao Pereira', phone: '5511999999998' },
+    ]);
+
+    await tx.insert(services).values([
+        {
+            tenantId: existingTenant.id,
+            name: 'Corte masculino',
+            description: 'Corte tradicional.',
+            durationMinutes: 30,
+            price: '35.00',
+        },
+        {
+            tenantId: existingTenant.id,
+            name: 'Manicure',
+            description: 'Manicure tradicional.',
+            durationMinutes: 45,
+            price: '45.00',
+        },
+    ]);
+
+    await tx.insert(scheduleConfigs).values(
+        Array.from({ length: 7 }, (_, dayOfWeek) => ({
+            tenantId: existingTenant.id,
+            dayOfWeek,
+            openTime: '08:00',
+            closeTime: '18:00',
+            isClosed: dayOfWeek === 0,
+        })),
+    );
+});
+
+console.log('Seed concluido para o tenant studiofy-demo.');
+await pool.end();
+
+--- FILE: backend/src/modules/appointments/useCases/CreateAppointmentController.ts ---
+
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { CreateAppointmentUseCase } from './createAppointment/CreateAppointmentUseCase.js';
+
+const createAppointmentSchema = z.object({
+    serviceId: z.string().uuid('ID de serviço inválido'),
+    startTime: z.string().datetime('Data/Hora deve estar em formato ISO (UTC)'),
+    customer: z.object({
+        name: z.string().min(2, 'Nome do cliente é obrigatório'),
+        phone: z
+            .string()
+            .transform((val) => val.replace(/\D/g, '')) // Remove caracteres não numéricos
+            .refine((val) => val.length >= 10 && val.length <= 11, {
+                message: 'Telefone deve conter DDD e ter 10 ou 11 dígitos',
+            }),
+    }),
+});
+
+export class CreateAppointmentController {
+    async handle(request: Request, response: Response): Promise<Response> {
+        const { slug } = request.params;
+        const { serviceId, startTime, customer } = createAppointmentSchema.parse(request.body);
+
+        const createAppointmentUseCase = new CreateAppointmentUseCase();
+        const appointment = await createAppointmentUseCase.execute({
+            slug: String(slug),
+            serviceId,
+            startTimeIso: startTime,
+            customerName: customer.name,
+            customerPhone: customer.phone,
+        });
+
+        return response.status(201).json({
+            success: true,
+            data: appointment,
+        });
+    }
+}
+
+--- FILE: backend/src/modules/appointments/useCases/UpdateAppointmentStatusController.ts ---
+
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { and, eq } from 'drizzle-orm';
+import { withTenant } from '../../../db/client.js';
+import { appointments } from '../../../db/schema.js';
+import { AppError } from '../../../shared/errors/AppError.js';
+
+const updateStatusSchema = z.object({
+    status: z.enum(['CONFIRMADO', 'RECUSADO', 'CONCLUIDO', 'CANCELADO']),
+});
+
+export class UpdateAppointmentStatusController {
+    async handle(request: Request, response: Response): Promise<Response> {
+        const tenantId = request.user?.tenantId;
+        const { id } = request.params;
+        const { status: newStatus } = updateStatusSchema.parse(request.body);
+
+        if (!tenantId) {
+            throw new AppError('Contexto de tenant ausente', 400, 'MISSING_TENANT');
+        }
+
+        const updated = await withTenant(tenantId, async (tx) => {
+            const [current] = await tx
+                .select({ id: appointments.id, status: appointments.status })
+                .from(appointments)
+                .where(and(eq(appointments.id, String(id)), eq(appointments.tenantId, tenantId)));
+
+            if (!current) {
+                throw new AppError('Agendamento não encontrado', 404, 'APPOINTMENT_NOT_FOUND');
+            }
+
+            const validTransitions: Record<string, string[]> = {
+                PENDENTE: ['CONFIRMADO', 'RECUSADO', 'CANCELADO'],
+                CONFIRMADO: ['CONCLUIDO', 'CANCELADO'],
+            };
+
+            if (!validTransitions[current.status]?.includes(newStatus)) {
+                throw new AppError(
+                    `Transição inválida de ${current.status} para ${newStatus}`,
+                    400,
+                    'INVALID_STATUS_TRANSITION',
+                );
+            }
+
+            const [result] = await tx
+                .update(appointments)
+                .set({ status: newStatus, updatedAt: new Date() })
+                .where(eq(appointments.id, current.id))
+                .returning();
+
+            return result;
+        });
+
+        if (!updated) {
+            throw new AppError('Falha ao atualizar o agendamento', 500, 'APPOINTMENT_UPDATE_FAILED');
+        }
+
+        return response.json({
+            success: true,
+            data: updated,
+        });
+    }
+}
+
+--- FILE: backend/src/modules/appointments/useCases/createAppointment/CreateAppointmentUseCase.ts ---
+
+import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
+import { db, withTenant } from '../../../../db/client.js';
+import { tenants, services, scheduleConfigs, appointments, customers } from '../../../../db/schema.js';
+import { AppError } from '../../../../shared/errors/AppError.js';
+
+interface IRequest {
+    slug: string;
+    serviceId: string;
+    startTimeIso: string;
+    customerName: string;
+    customerPhone: string;
+}
+
+export class CreateAppointmentUseCase {
+    async execute({ slug, serviceId, startTimeIso, customerName, customerPhone }: IRequest) {
+        // 1. Validar Tenant pelo Slug
+        const [tenant] = await db
+            .select({ id: tenants.id })
+            .from(tenants)
+            .where(eq(tenants.slug, slug));
+
+        if (!tenant) {
+            throw new AppError('Estabelecimento não encontrado', 404, 'TENANT_NOT_FOUND');
+        }
+
+        return await withTenant(tenant.id, async (tx) => {
+            // 2. Validar Serviço
+            const [service] = await tx
+                .select({ id: services.id, durationMinutes: services.durationMinutes, active: services.active })
+                .from(services)
+                .where(and(eq(services.id, serviceId), eq(services.tenantId, tenant.id)));
+
+            if (!service || !service.active) {
+                throw new AppError('Serviço não encontrado ou inativo', 404, 'SERVICE_NOT_FOUND');
+            }
+
+            // 3. Validar Datas e Limite de Antecedência (2h)
+            const startTime = new Date(startTimeIso);
+            const now = new Date();
+
+            if (isNaN(startTime.getTime())) {
+                throw new AppError('Data/Hora de início inválida', 400, 'INVALID_DATE');
+            }
+
+            const minAllowedTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+            if (startTime < minAllowedTime) {
+                throw new AppError('Agendamentos devem ser feitos com no mínimo 2 horas de antecedência', 400, 'MIN_ADVANCE_TIME');
+            }
+
+            const endTime = new Date(startTime.getTime() + service.durationMinutes * 60 * 1000);
+
+            // 4. Validar Conflito com Agendamentos Existentes (PENDENTE ou CONFIRMADO)
+            const conflictingAppointments = await tx
+                .select({ id: appointments.id })
+                .from(appointments)
+                .where(
+                    and(
+                        eq(appointments.tenantId, tenant.id),
+                        inArray(appointments.status, ['PENDENTE', 'CONFIRMADO']),
+                        sql`${appointments.startTime} < ${endTime} AND ${appointments.endTime} > ${startTime}`
+                    )
+                );
+
+            if (conflictingAppointments.length > 0) {
+                throw new AppError('O horário selecionado não está mais disponível', 409, 'SLOT_UNAVAILABLE');
+            }
+
+            // 5. UPSERT simples do Cliente (Nome + Telefone)
+            let customerId = '';
+            const [existingCustomer] = await tx
+                .select({ id: customers.id })
+                .from(customers)
+                .where(and(eq(customers.tenantId, tenant.id), eq(customers.phone, customerPhone)));
+
+            if (existingCustomer) {
+                customerId = existingCustomer.id;
+            } else {
+                const [newCustomer] = await tx
+                    .insert(customers)
+                    .values({
+                        tenantId: tenant.id,
+                        name: customerName,
+                        phone: customerPhone,
+                    })
+                    .returning();
+
+                if (!newCustomer) {
+                    throw new AppError('Não foi possível criar o cliente', 500, 'CUSTOMER_CREATION_FAILED');
+                }
+
+                customerId = newCustomer.id;
+            }
+
+            // 6. Criar o Agendamento PENDENTE com expiração de 12 horas
+            const expiresAt = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+
+            const [newAppointment] = await tx
+                .insert(appointments)
+                .values({
+                    tenantId: tenant.id,
+                    serviceId: service.id,
+                    customerId,
+                    startTime,
+                    endTime,
+                    status: 'PENDENTE',
+                    expiresAt,
+                })
+                .returning();
+
+            return newAppointment;
+        });
+    }
+}
+
+--- FILE: backend/src/modules/appointments/useCases/getAvailableSlots/GetAvailableSlotsController.ts ---
+
+import { Request, Response } from 'express';
+import { GetAvailableSlotsUseCase } from './GetAvailableSlotsUseCase.js';
+import { AppError } from '../../../../shared/errors/AppError.js';
+
+export class GetAvailableSlotsController {
+    async handle(request: Request, response: Response): Promise<Response> {
+        const { slug } = request.params;
+        const { date, serviceId } = request.query;
+
+        if (typeof slug !== 'string') {
+            throw new AppError('Slug inválido', 400, 'INVALID_SLUG');
+        }
+
+        if (typeof date !== 'string' || typeof serviceId !== 'string') {
+            throw new AppError('Data (YYYY-MM-DD) e serviceId são obrigatórios', 400, 'MISSING_QUERY_PARAMS');
+        }
+
+        const getAvailableSlotsUseCase = new GetAvailableSlotsUseCase();
+        const availableSlots = await getAvailableSlotsUseCase.execute({
+            slug,
+            dateStr: date,
+            serviceId,
+        });
+
+        return response.json({
+            success: true,
+            data: {
+                date,
+                availableSlots,
+            },
+        });
+    }
+}
+
+--- FILE: backend/src/modules/appointments/useCases/getAvailableSlots/GetAvailableSlotsUseCase.ts ---
+
+import { and, eq, gte, lte, inArray } from 'drizzle-orm';
+import { db, withTenant } from '../../../../db/client.js';
+import { tenants, services, scheduleConfigs, appointments } from '../../../../db/schema.js';
+import { AppError } from '../../../../shared/errors/AppError.js';
+
+interface IRequest {
+    slug: string;
+    dateStr: string; // Formato YYYY-MM-DD
+    serviceId: string;
+}
+
+export class GetAvailableSlotsUseCase {
+    async execute({ slug, dateStr, serviceId }: IRequest): Promise<string[]> {
+        // 1. Validar e buscar o Tenant pelo slug
+        const [tenant] = await db
+            .select({ id: tenants.id, timezone: tenants.timezone })
+            .from(tenants)
+            .where(eq(tenants.slug, slug));
+
+        if (!tenant) {
+            throw new AppError('Estabelecimento não encontrado', 404, 'TENANT_NOT_FOUND');
+        }
+
+        // 2. Buscar o serviço e sua duração
+        const [service] = await withTenant(tenant.id, (tx) =>
+            tx
+                .select({ id: services.id, durationMinutes: services.durationMinutes, active: services.active })
+                .from(services)
+                .where(and(eq(services.id, serviceId), eq(services.tenantId, tenant.id))),
+        );
+
+        if (!service || !service.active) {
+            throw new AppError('Serviço não encontrado ou inativo', 404, 'SERVICE_NOT_FOUND');
+        }
+
+        // 3. Validar a janela de 30 dias futuros e antecedência
+        const requestedDate = new Date(`${dateStr}T00:00:00.000Z`);
+        const now = new Date();
+        const maxDate = new Date();
+        maxDate.setDate(now.getDate() + 30);
+
+        if (isNaN(requestedDate.getTime())) {
+            throw new AppError('Data inválida. Use o formato YYYY-MM-DD', 400, 'INVALID_DATE');
+        }
+
+        if (requestedDate > maxDate) {
+            throw new AppError('Agendamentos são permitidos apenas para os próximos 30 dias', 400, 'DATE_OUT_OF_RANGE');
+        }
+
+        // 4. Buscar configuração de horário do dia da semana (0=Dom, 6=Sáb)
+        const dayOfWeek = requestedDate.getUTCDay();
+        const [schedule] = await withTenant(tenant.id, (tx) =>
+            tx
+                .select()
+                .from(scheduleConfigs)
+                .where(and(eq(scheduleConfigs.tenantId, tenant.id), eq(scheduleConfigs.dayOfWeek, dayOfWeek))),
+        );
+
+        if (!schedule || schedule.isClosed) {
+            return []; // Estabelecimento fechado no dia selecionado
+        }
+
+        // 5. Montar início e fim do dia em UTC para buscar os agendamentos existentes
+        const dayStart = new Date(`${dateStr}T00:00:00.000Z`);
+        const dayEnd = new Date(`${dateStr}T23:59:59.999Z`);
+
+        const existingAppointments = await withTenant(tenant.id, (tx) =>
+            tx
+                .select({ startTime: appointments.startTime, endTime: appointments.endTime })
+                .from(appointments)
+                .where(
+                    and(
+                        eq(appointments.tenantId, tenant.id),
+                        inArray(appointments.status, ['PENDENTE', 'CONFIRMADO']),
+                        gte(appointments.startTime, dayStart),
+                        lte(appointments.endTime, dayEnd),
+                    ),
+                ),
+        );
+
+        // 6. Gerar os slots a cada 30 minutos dentro de openTime e closeTime
+        const slots: string[] = [];
+        const [openHours, openMinutes] = schedule.openTime.split(':').map(Number);
+        const [closeHours, closeMinutes] = schedule.closeTime.split(':').map(Number);
+
+        const slotStart = new Date(`${dateStr}T${String(openHours).padStart(2, '0')}:${String(openMinutes).padStart(2, '0')}:00.000Z`);
+        const dayCloseTime = new Date(`${dateStr}T${String(closeHours).padStart(2, '0')}:${String(closeMinutes).padStart(2, '0')}:00.000Z`);
+
+        const minAllowedTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 horas de antecedência
+
+        while (slotStart < dayCloseTime) {
+            const slotEnd = new Date(slotStart.getTime() + service.durationMinutes * 60 * 1000);
+
+            // O serviço completo deve terminar antes ou até o horário de fechamento
+            if (slotEnd <= dayCloseTime) {
+                // Verificar antecedência mínima de 2h
+                if (slotStart >= minAllowedTime) {
+                    // Verificar sobreposição com agendamentos PENDENTES ou CONFIRMADOS
+                    const hasConflict = existingAppointments.some((appt) => {
+                        const apptStart = new Date(appt.startTime);
+                        const apptEnd = new Date(appt.endTime);
+                        return slotStart < apptEnd && slotEnd > apptStart;
+                    });
+
+                    if (!hasConflict) {
+                        const timeFormatted = slotStart.toISOString().substring(11, 16); // "HH:MM"
+                        slots.push(timeFormatted);
+                    }
+                }
+            }
+
+            // Avança de 30 em 30 minutos para a próxima opção
+            slotStart.setMinutes(slotStart.getMinutes() + 30);
+        }
+
+        return slots;
+    }
+}
+
+--- FILE: backend/src/modules/appointments/useCases/phase4Step1And2.spec.ts ---
+
+import { describe, it, expect, beforeAll } from 'vitest';
+import request from 'supertest';
+import express from 'express';
+import { db, withTenant } from '../../../db/client.js';
+import { tenants, services, scheduleConfigs, users } from '../../../db/schema.js';
+import { routes } from '../../../routes/index.js';
+import { errorHandler } from '../../../shared/middlewares/errorHandler.js';
+import { AuthProvider } from '../../../shared/providers/AuthProvider.js';
+
+const app = express();
+app.use(express.json());
+app.use(routes);
+app.use(errorHandler);
+
+describe('Suite de Testes de Integração - FASE 4 (Passo 1 e 2)', () => {
+    let tenantSlug = '';
+    let tenantId = '';
+    let adminToken = '';
+    let createdServiceId = '';
+    let inactiveServiceId = '';
+
+    beforeAll(async () => {
+        tenantSlug = `studio-spec-${Date.now()}`;
+
+        // 1. Setup: Criar Tenant de Teste
+        const [insertedTenant] = await db
+            .insert(tenants)
+            .values({
+                name: 'Studio Teste Specs',
+                slug: tenantSlug,
+                phone: '11988887777',
+            })
+            .returning();
+
+        if (!insertedTenant) {
+            throw new Error('Falha ao criar tenant no setup do teste.');
+        }
+
+        tenantId = insertedTenant.id;
+
+        // No beforeAll de phase4Step1And2.spec.ts:
+        await withTenant(tenantId, async (tx) => {
+            // Criar Usuário Admin
+            const passwordHash = await AuthProvider.hashPassword('senha_segura_123');
+            const [admin] = await tx
+                .insert(users)
+                .values({
+                    tenantId,
+                    name: 'Admin do Studio',
+                    email: `admin-${Date.now()}@studio.com`,
+                    passwordHash,
+                    role: 'ADMIN',
+                })
+                .returning();
+
+            if (admin) {
+                adminToken = AuthProvider.generateToken({
+                    sub: admin.id,
+                    tenantId,
+                    role: 'ADMIN',
+                });
+            }
+
+            // Criar um serviço base via DB para garantir ID nos testes 5 e 6
+            const [baseService] = await tx
+                .insert(services)
+                .values({
+                    tenantId,
+                    name: 'Serviço Base',
+                    durationMinutes: 30,
+                    price: '50.00',
+                    active: true,
+                })
+                .returning();
+
+            if (baseService) {
+                createdServiceId = baseService.id;
+            }
+
+            const [inactiveService] = await tx
+                .insert(services)
+                .values({
+                    tenantId,
+                    name: 'Serviço Inativo',
+                    durationMinutes: 30,
+                    price: '50.00',
+                    active: false,
+                })
+                .returning();
+
+            if (inactiveService) {
+                inactiveServiceId = inactiveService.id;
+            }
+
+            // Configurar Horários de Funcionamento (Segunda a Domingo, 08:00 às 18:00)
+            for (let day = 0; day <= 6; day++) {
+                await tx.insert(scheduleConfigs).values({
+                    tenantId,
+                    dayOfWeek: day,
+                    openTime: '08:00',
+                    closeTime: '18:00',
+                    isClosed: false,
+                });
+            }
+        });
+    });
+
+    // ----------------------------------------------------
+    // 1. MÓDULO DE SERVIÇOS (ADMIN)
+    // ----------------------------------------------------
+    it('1. [ADMIN] Deve cadastrar um novo serviço com sucesso (201 Created)', async () => {
+        const response = await request(app)
+            .post('/api/v1/admin/services')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({
+                name: 'Corte de Cabelo Masculino',
+                description: 'Corte completo com lavagem',
+                durationMinutes: 30,
+                price: 45.0,
+            });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toHaveProperty('id');
+        expect(response.body.data.name).toBe('Corte de Cabelo Masculino');
+
+        createdServiceId = response.body.data.id;
+    });
+
+    it('2. [ADMIN] Deve rejeitar criação de serviço sem token de autenticação (401 Unauthorized)', async () => {
+        const response = await request(app)
+            .post('/api/v1/admin/services')
+            .send({
+                name: 'Serviço Não Autorizado',
+                durationMinutes: 30,
+                price: 30.0,
+            });
+
+        expect(response.status).toBe(401);
+        expect(response.body.success).toBe(false);
+    });
+
+    // ----------------------------------------------------
+    // 2. MÓDULO PÚBLICO DO TENANT E SERVIÇOS
+    // ----------------------------------------------------
+    it('3. [PUBLIC] Deve retornar dados públicos do tenant pelo slug (200 OK)', async () => {
+        const response = await request(app).get(`/api/v1/public/tenants/${tenantSlug}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.slug).toBe(tenantSlug);
+        expect(response.body.data.name).toBe('Studio Teste Specs');
+    });
+
+    it('4. [PUBLIC] Deve retornar 404 ao buscar slug inexistente', async () => {
+        const response = await request(app).get('/api/v1/public/tenants/slug-inexistente-123456');
+
+        expect(response.status).toBe(404);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('TENANT_NOT_FOUND');
+    });
+
+    it('5. [PUBLIC] Deve listar apenas os serviços ativos do tenant (200 OK)', async () => {
+        const response = await request(app).get(`/api/v1/public/tenants/${tenantSlug}/services`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(Array.isArray(response.body.data)).toBe(true);
+        expect(response.body.data.length).toBeGreaterThan(0);
+        expect(response.body.data).toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: createdServiceId })]),
+        );
+        expect(response.body.data).not.toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: inactiveServiceId })]),
+        );
+    });
+
+    // ----------------------------------------------------
+    // 3. CONSULTA PÚBLICA DE SLOTS
+    // ----------------------------------------------------
+    it('6. [PUBLIC] Deve consultar os slots disponíveis para uma data futura válida (200 OK)', async () => {
+        // Gerar data para daqui a 5 dias (YYYY-MM-DD)
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 5);
+        const dateStr = targetDate.toISOString().split('T')[0];
+
+        const response = await request(app).get(
+            `/api/v1/public/tenants/${tenantSlug}/slots?date=${dateStr}&serviceId=${createdServiceId}`
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.date).toBe(dateStr);
+        expect(Array.isArray(response.body.data.availableSlots)).toBe(true);
+        expect(response.body.data.availableSlots.length).toBeGreaterThan(0);
+        expect(response.body.data.availableSlots).toContain('08:00');
+    });
+
+    it('7. [PUBLIC] Deve rejeitar consulta de slots com parâmetros ausentes (400 Bad Request)', async () => {
+        const response = await request(app).get(`/api/v1/public/tenants/${tenantSlug}/slots`);
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('MISSING_QUERY_PARAMS');
+    });
+});
+
+--- FILE: backend/src/modules/appointments/useCases/phase4Step3.spec.ts ---
+
+import { describe, it, expect, beforeAll } from 'vitest';
+import request from 'supertest';
+import express from 'express';
+import { errorHandler } from '../../../shared/middlewares/errorHandler.js';
+import { AuthProvider } from '../../../shared/providers/AuthProvider.js';
+import { db, withTenant } from '../../../db/client.js';
+import { services, tenants, users } from '../../../db/schema.js';
+import { routes } from '../../../routes/index.js';
+
+const app = express();
+app.use(express.json());
+app.use(routes);
+app.use(errorHandler);
+
+describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamento)', () => {
+    let tenantSlug = '';
+    let tenantId = '';
+    let serviceId = '';
+    let adminToken = '';
+    let appointmentId = '';
+    let targetStartTime = '';
+
+    beforeAll(async () => {
+        tenantSlug = `studio-flow-${Date.now()}`;
+
+        const [tenant] = await db.insert(tenants).values({ name: 'Studio Flow Test', slug: tenantSlug, phone: '11999998888' }).returning();
+        if (!tenant) {
+            throw new Error('Tenant não foi criado');
+        }
+        tenantId = tenant.id;
+
+        await withTenant(tenantId, async (tx) => {
+            const passwordHash = await AuthProvider.hashPassword('senha_segura_123');
+            const [admin] = await tx.insert(users).values({ tenantId, name: 'Admin Flow', email: `admin-${Date.now()}@flow.com`, passwordHash, role: 'ADMIN' }).returning();
+            if (!admin) {
+                throw new Error('Admin não foi criado');
+            }
+            adminToken = AuthProvider.generateToken({ sub: admin.id, tenantId, role: 'ADMIN' });
+
+            const [service] = await tx.insert(services).values({ tenantId, name: 'Corte Premium', durationMinutes: 30, price: '60.00', active: true }).returning();
+            if (!service) {
+                throw new Error('Serviço não foi criado');
+            }
+            serviceId = service.id;
+        });
+
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 2);
+        targetDate.setUTCHours(14, 0, 0, 0);
+        targetStartTime = targetDate.toISOString();
+    });
+
+    it('1. [PUBLIC] Deve criar um novo agendamento com status PENDENTE (201 Created)', async () => {
+        const response = await request(app)
+            .post(`/api/v1/public/tenants/${tenantSlug}/appointments`)
+            .send({
+                serviceId,
+                startTime: targetStartTime,
+                customer: { name: 'Cliente Teste', phone: '11988887777' },
+            });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe('PENDENTE');
+        appointmentId = response.body.data.id;
+    });
+
+    it('2. [PUBLIC] Deve rejeitar agendamento duplicado no mesmo slot (409 Conflict)', async () => {
+        const response = await request(app)
+            .post(`/api/v1/public/tenants/${tenantSlug}/appointments`)
+            .send({
+                serviceId,
+                startTime: targetStartTime,
+                customer: { name: 'Outro Cliente', phone: '11977776666' },
+            });
+
+        expect(response.status).toBe(409);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('SLOT_UNAVAILABLE');
+    });
+
+    it('3. [ADMIN] Deve confirmar o agendamento PENDENTE -> CONFIRMADO (200 OK)', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/admin/appointments/${appointmentId}/status`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ status: 'CONFIRMADO' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe('CONFIRMADO');
+    });
+
+    it('4. [ADMIN] Deve rejeitar transição inválida CONFIRMADO -> RECUSADO (400 Bad Request)', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/admin/appointments/${appointmentId}/status`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ status: 'RECUSADO' });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('INVALID_STATUS_TRANSITION');
+    });
+
+    it('5. [ADMIN] Deve listar a agenda do tenant com link wa.me (200 OK)', async () => {
+        const response = await request(app)
+            .get(`/api/v1/admin/appointments`)
+            .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(Array.isArray(response.body.data)).toBe(true);
+        expect(response.body.data).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    whatsappLink: expect.stringContaining('wa.me/5511988887777'),
+                }),
+            ]),
+        );
+    });
+
+    it('6. [ADMIN] Deve concluir atendimento CONFIRMADO -> CONCLUIDO (200 OK)', async () => {
+        const response = await request(app)
+            .patch(`/api/v1/admin/appointments/${appointmentId}/status`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ status: 'CONCLUIDO' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe('CONCLUIDO');
+    });
+});
+
+--- FILE: backend/src/modules/auth/useCases/login/LoginController.ts ---
+
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { eq } from 'drizzle-orm';
+import { db, withTenant } from '../../../../db/client.js';
+import { tenants, users } from '../../../../db/schema.js';
+import { AuthProvider } from '../../../../shared/providers/AuthProvider.js';
+import { AppError } from '../../../../shared/errors/AppError.js';
+
+const loginSchema = z.object({
+    tenantSlug: z.string().min(2, 'Slug do estabelecimento e obrigatorio.'),
+    email: z.string().email('E-mail inválido.'),
+    password: z.string().min(1, 'A senha é obrigatória.'),
+});
+
+export class LoginController {
+    async handle(request: Request, response: Response): Promise<Response> {
+        const { tenantSlug, email, password } = loginSchema.parse(request.body);
+
+        const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, tenantSlug));
+
+        if (!tenant) {
+            throw new AppError('E-mail ou senha incorretos.', 401, 'INVALID_CREDENTIALS');
+        }
+
+        // O usuario so e consultado depois que o tenant foi estabelecido no contexto RLS.
+        const [user] = await withTenant(tenant.id, async (tx) =>
+            tx.select().from(users).where(eq(users.email, email)),
+        );
+
+        if (!user) {
+            throw new AppError('E-mail ou senha incorretos.', 401, 'INVALID_CREDENTIALS');
+        }
+
+        if (!user.active) {
+            throw new AppError('Usuário inativo no sistema.', 403, 'USER_INACTIVE');
+        }
+
+        // 2. Comparar senha com o hash seguro
+        const passwordMatch = await AuthProvider.comparePassword(password, user.passwordHash);
+
+        if (!passwordMatch) {
+            throw new AppError('E-mail ou senha incorretos.', 401, 'INVALID_CREDENTIALS');
+        }
+
+        // 3. Emitir token JWT vinculando Usuário e Tenant
+        const token = AuthProvider.generateToken({
+            sub: user.id,
+            tenantId: user.tenantId,
+            role: user.role as 'ADMIN' | 'PROFESSIONAL',
+        });
+
+        return response.json({
+            success: true,
+            data: {
+                token,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    tenantId: user.tenantId,
+                },
+            },
+        });
+    }
+}
+
+--- FILE: backend/src/modules/auth/useCases/login/loginAndProvision.spec.ts ---
+
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import express from 'express';
+import { routes } from '../../../../routes/index.js';
+import { errorHandler } from '../../../../shared/middlewares/errorHandler.js';
+
+// Cria uma instância leve do Express para executar os testes
+const app = express();
+app.use(express.json());
+app.use(routes);
+app.use(errorHandler);
+
+describe('Suite de Testes de Integração - FASE 3 (Segurança & Autenticação)', () => {
+    const uniqueSlug = `barbearia-test-${Date.now()}`;
+    const testEmail = `admin-${Date.now()}@teste.com`;
+    let authToken = '';
+
+    it('1. Deve provisionar um novo Tenant + Admin com sucesso (201 Created)', async () => {
+        const response = await request(app)
+            .post('/api/v1/public/tenants/provision')
+            .send({
+                tenant: {
+                    name: 'Barbearia de Teste Automatizado',
+                    slug: uniqueSlug,
+                    phone: '11999999999',
+                },
+                admin: {
+                    name: 'Admin Teste',
+                    email: testEmail,
+                    password: 'senha_segura_123',
+                },
+            });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toHaveProperty('token');
+        expect(response.body.data.tenant.slug).toBe(uniqueSlug);
+    });
+
+    it('2. Deve impedir o cadastro duplicado usando o mesmo Slug (409 Conflict)', async () => {
+        const response = await request(app)
+            .post('/api/v1/public/tenants/provision')
+            .send({
+                tenant: {
+                    name: 'Outra Barbearia',
+                    slug: uniqueSlug, // Mesmo slug do teste anterior
+                    phone: '11988888888',
+                },
+                admin: {
+                    name: 'Outro Admin',
+                    email: 'outro@teste.com',
+                    password: 'senha_segura_123',
+                },
+            });
+
+        expect(response.status).toBe(409);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('SLUG_ALREADY_EXISTS');
+    });
+
+    it('3. Deve realizar login com sucesso e retornar o Token JWT (200 OK)', async () => {
+        const response = await request(app)
+            .post('/api/v1/auth/login')
+            .send({
+                tenantSlug: uniqueSlug,
+                email: testEmail,
+                password: 'senha_segura_123',
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data).toHaveProperty('token');
+
+        // Armazena o token para o próximo teste
+        authToken = response.body.data.token;
+    });
+
+    it('4. Deve negar o acesso a rota protegida se o token não for fornecido (401 Unauthorized)', async () => {
+        const response = await request(app).get('/api/v1/admin/dashboard');
+
+        expect(response.status).toBe(401);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('5. Deve permitir o acesso a rota protegida com Token válido e RLS (200 OK)', async () => {
+        const response = await request(app)
+            .get('/api/v1/admin/dashboard')
+            .set('Authorization', `Bearer ${authToken}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.message).toContain('Acesso concedido com RLS ativo');
+    });
+});
+
+--- FILE: backend/src/modules/services/useCases/createService/CreateServiceController.ts ---
+
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { withTenant } from '../../../../db/client.js';
+import { services } from '../../../../db/schema.js';
+import { AppError } from '../../../../shared/errors/AppError.js';
+
+const createServiceSchema = z.object({
+    name: z.string().min(2, 'Nome do serviço é obrigatório'),
+    description: z.string().optional(),
+    durationMinutes: z.number().int().positive('A duração deve ser em minutos positivos'),
+    price: z.number().positive('O preço deve ser um valor positivo'),
+});
+
+export class CreateServiceController {
+    async handle(request: Request, response: Response): Promise<Response> {
+        const tenantId = request.user?.tenantId;
+
+        if (!tenantId || typeof tenantId !== 'string') {
+            throw new AppError('Contexto do tenant não informado ou inválido', 400, 'MISSING_TENANT');
+        }
+
+        const { name, description, durationMinutes, price } = createServiceSchema.parse(request.body);
+
+        const [newService] = await withTenant(tenantId, (tx) =>
+            tx
+                .insert(services)
+                .values({
+                    tenantId,
+                    name,
+                    description,
+                    durationMinutes,
+                    price: price.toFixed(2),
+                    active: true,
+                })
+                .returning(),
+        );
+
+        if (!newService) {
+            throw new AppError('Falha ao cadastrar o serviço', 500, 'SERVICE_CREATION_FAILED');
+        }
+
+        return response.status(201).json({
+            success: true,
+            data: newService,
+        });
+    }
+}
+
+--- FILE: backend/src/modules/tenants/useCases/getPublicTenant/GetPublicTenantController.ts ---
+
+import { Request, Response } from 'express';
+import { and, eq } from 'drizzle-orm';
+import { db, withTenant } from '../../../../db/client.js';
+import { tenants, services } from '../../../../db/schema.js';
+import { AppError } from '../../../../shared/errors/AppError.js';
+
+export class GetPublicTenantController {
+    // Retorna dados públicos do tenant pelo slug
+    async getTenant(request: Request, response: Response): Promise<Response> {
+        const { slug } = request.params;
+
+        if (typeof slug !== 'string') {
+            throw new AppError('Slug inválido', 400, 'INVALID_SLUG');
+        }
+
+        const [tenant] = await db
+            .select({
+                id: tenants.id,
+                name: tenants.name,
+                slug: tenants.slug,
+                phone: tenants.phone,
+                logoUrl: tenants.logoUrl,
+                primaryColor: tenants.primaryColor,
+            })
+            .from(tenants)
+            .where(eq(tenants.slug, slug));
+
+        if (!tenant) {
+            throw new AppError('Estabelecimento não encontrado', 404, 'TENANT_NOT_FOUND');
+        }
+
+        return response.json({
+            success: true,
+            data: tenant,
+        });
+    }
+
+    // Retorna apenas serviços ATIVOS do tenant pelo slug
+    async getServices(request: Request, response: Response): Promise<Response> {
+        const { slug } = request.params;
+
+        if (typeof slug !== 'string') {
+            throw new AppError('Slug inválido', 400, 'INVALID_SLUG');
+        }
+
+        const [tenant] = await db
+            .select({ id: tenants.id })
+            .from(tenants)
+            .where(eq(tenants.slug, slug));
+
+        if (!tenant) {
+            throw new AppError('Estabelecimento não encontrado', 404, 'TENANT_NOT_FOUND');
+        }
+
+        const activeServices = await withTenant(tenant.id, (tx) =>
+            tx
+                .select({
+                    id: services.id,
+                    name: services.name,
+                    description: services.description,
+                    durationMinutes: services.durationMinutes,
+                    price: services.price,
+                })
+                .from(services)
+                .where(and(eq(services.tenantId, tenant.id), eq(services.active, true))),
+        );
+
+        return response.json({
+            success: true,
+            data: activeServices,
+        });
+    }
+}
+
+--- FILE: backend/src/modules/tenants/useCases/provisionTenant/ProvisionTenantController.ts ---
+
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { db } from '../../../../db/client.js';
+import { tenants, users } from '../../../../db/schema.js';
+import { AuthProvider } from '../../../../shared/providers/AuthProvider.js';
+import { AppError } from '../../../../shared/errors/AppError.js';
+
+const provisionSchema = z.object({
+    tenant: z.object({
+        name: z.string().min(2, 'Nome do estabelecimento muito curto'),
+        slug: z
+            .string()
+            .min(2, 'Slug muito curto')
+            .regex(/^[a-z0-9-]+$/, 'Slug inválido (use apenas letras minúsculas e hífen)'),
+        phone: z.string().min(10, 'Telefone inválido'),
+    }),
+    admin: z.object({
+        name: z.string().min(2, 'Nome do administrador muito curto'),
+        email: z.string().email('E-mail inválido'),
+        password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
+    }),
+});
+
+export class ProvisionTenantController {
+    async handle(request: Request, response: Response): Promise<Response> {
+        // 1. Validar a entrada com Zod
+        const { tenant: tenantData, admin: adminData } = provisionSchema.parse(request.body);
+
+        // 2. Verificar se o slug do Tenant já existe no banco
+        const [existingTenant] = await db
+            .select()
+            .from(tenants)
+            .where(eq(tenants.slug, tenantData.slug));
+
+        if (existingTenant) {
+            throw new AppError('Este slug já está em uso por outro estabelecimento.', 409, 'SLUG_ALREADY_EXISTS');
+        }
+
+        // 3. Gerar o hash seguro da senha do Admin
+        const passwordHash = await AuthProvider.hashPassword(adminData.password);
+
+        // 4. Executar a criação atômica via Transação no Drizzle
+        const result = await db.transaction(async (tx) => {
+            const [newTenant] = await tx
+                .insert(tenants)
+                .values({
+                    name: tenantData.name,
+                    slug: tenantData.slug,
+                    phone: tenantData.phone,
+                })
+                .returning();
+
+            if (!newTenant) {
+                throw new AppError('Falha ao criar o estabelecimento.', 500, 'TENANT_CREATION_FAILED');
+            }
+
+            await tx.execute(sql`SELECT set_config('app.current_tenant_id', ${newTenant.id}, true)`);
+
+            const [newAdmin] = await tx
+                .insert(users)
+                .values({
+                    tenantId: newTenant.id,
+                    name: adminData.name,
+                    email: adminData.email,
+                    passwordHash,
+                    role: 'ADMIN',
+                })
+                .returning();
+
+            // 💡 Validação do newAdmin: garante que result.admin nunca será undefined fora da transação
+            if (!newAdmin) {
+                throw new AppError('Falha ao criar o administrador do estabelecimento.', 500, 'ADMIN_CREATION_FAILED');
+            }
+
+            return { tenant: newTenant, admin: newAdmin };
+        });
+
+        // 5. Emitir o Token JWT de acesso inicial (Agora 100% tipado e seguro)
+        const token = AuthProvider.generateToken({
+            sub: result.admin.id,
+            tenantId: result.tenant.id,
+            role: 'ADMIN',
+        });
+
+        // 6. Retornar a resposta padronizada
+        return response.status(201).json({
+            success: true,
+            data: {
+                token,
+                tenant: {
+                    id: result.tenant.id,
+                    name: result.tenant.name,
+                    slug: result.tenant.slug,
+                },
+                user: {
+                    id: result.admin.id,
+                    name: result.admin.name,
+                    email: result.admin.email,
+                    role: result.admin.role,
+                },
+            },
+        });
+    }
+}
+
+--- FILE: backend/src/routes/index.ts ---
+
+import { Router } from 'express';
+import { adminRoutes } from './admin.routes.js';
+import { authRoutes } from './auth.routes.js';
+import { publicRoutes } from './public.routes.js';
+
+const routes = Router();
+
+routes.use(authRoutes);
+routes.use(publicRoutes);
+routes.use(adminRoutes);
+
+export { routes };
+
+--- FILE: backend/src/server.ts ---
+
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { env } from './config/env.js';
+import { routes } from './routes/index.js';
+import { errorHandler } from './shared/middlewares/errorHandler.js';
+
+const app = express();
+
+// Middlewares de Segurança e Parsing
+app.use(helmet());
+app.use(cors({ origin: env.FRONTEND_URL }));
+app.use(express.json());
+
+// Rota de Healthcheck do Servidor
+app.get('/health', (_request, response) => {
+    return response.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Registro das Rotas da Aplicação (/api/v1/...)
+app.use(routes);
+
+// Middleware Global de Tratamento de Erros (Obrigatório vir após as rotas)
+app.use(errorHandler);
+
+app.listen(env.PORT, () => {
+    console.log(`🚀 StudioFy API rodando com sucesso em http://localhost:${env.PORT}`);
+});
+
+--- FILE: backend/src/shared/database/rlsAndConcurrency.spec.ts ---
+
+import { describe, it, expect, beforeAll } from 'vitest';
+import { db, withTenant } from '../../db/client.js';
+import { tenants, services, users, customers, appointments } from '../../db/schema.js';
+import { eq, sql } from 'drizzle-orm';
+
+describe('Suite de Testes de Banco & Segurança RLS - FASE 2', () => {
+    let tenantAId: string;
+    let tenantBId: string;
+
+    beforeAll(async () => {
+        // 1. Criar dois Tenants distintos para os testes de isolamento de RLS
+        const insertedTenantsA = await db
+            .insert(tenants)
+            .values({
+                name: 'Estabelecimento A',
+                slug: `tenant-a-${Date.now()}`,
+                phone: '11911111111',
+            })
+            .returning();
+
+        const insertedTenantsB = await db
+            .insert(tenants)
+            .values({
+                name: 'Estabelecimento B',
+                slug: `tenant-b-${Date.now()}`,
+                phone: '11922222222',
+            })
+            .returning();
+
+        const tA = insertedTenantsA[0];
+        const tB = insertedTenantsB[0];
+
+        if (!tA || !tB) {
+            throw new Error('Falha ao criar os tenants de teste no beforeAll.');
+        }
+
+        tenantAId = tA.id;
+        tenantBId = tB.id;
+    });
+
+    it('1. Deve confirmar que a Role do banco não possui SUPERUSER nem BYPASSRLS', async () => {
+        const result = await db.execute<{ rolsuper: boolean; rolbypassrls: boolean }>(
+            sql`SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;`
+        );
+
+        const currentUserRole = result.rows[0];
+
+        // Type Guard para garantir que o resultado da query não é undefined
+        if (!currentUserRole) {
+            throw new Error('Não foi possível obter as permissões da Role do usuário atual no PostgreSQL.');
+        }
+
+        expect(currentUserRole.rolsuper).toBe(false);
+        expect(currentUserRole.rolbypassrls).toBe(false);
+    });
+
+    it('2. Deve isolar a leitura de dados entre dois tenants usando contextos RLS diferentes', async () => {
+        let serviceAId = '';
+
+        // Inserir um serviço dentro do contexto RLS do Tenant A
+        await withTenant(tenantAId, async (tx) => {
+            const insertedServices = await tx
+                .insert(services)
+                .values({
+                    tenantId: tenantAId,
+                    name: 'Corte de Cabelo Tenant A',
+                    durationMinutes: 30,
+                    price: '50.00',
+                })
+                .returning();
+
+            const sA = insertedServices[0];
+            if (!sA) throw new Error('Falha ao criar serviço no Tenant A.');
+
+            serviceAId = sA.id;
+        });
+
+        // Tentar LER o serviço do Tenant A estando no contexto do Tenant B
+        await withTenant(tenantBId, async (tx) => {
+            const result = await tx.select().from(services).where(eq(services.id, serviceAId));
+
+            // O RLS deve interceptar e retornar um array vazio
+            expect(result.length).toBe(0);
+        });
+    });
+
+    it('3. Deve impedir alteração e exclusão de dados pertencentes a outro tenant', async () => {
+        let serviceAId = '';
+
+        // Criar registro no Tenant A
+        await withTenant(tenantAId, async (tx) => {
+            const insertedServices = await tx
+                .insert(services)
+                .values({
+                    tenantId: tenantAId,
+                    name: 'Barba Tenant A',
+                    durationMinutes: 20,
+                    price: '30.00',
+                })
+                .returning();
+
+            const sA = insertedServices[0];
+            if (!sA) throw new Error('Falha ao criar serviço no Tenant A.');
+
+            serviceAId = sA.id;
+        });
+
+        // Tentar ALTERAR o registro do Tenant A no contexto do Tenant B
+        await withTenant(tenantBId, async (tx) => {
+            const updated = await tx
+                .update(services)
+                .set({ name: 'Hackeado por Tenant B' })
+                .where(eq(services.id, serviceAId))
+                .returning();
+
+            expect(updated.length).toBe(0);
+        });
+
+        // Tentar EXCLUIR o registro do Tenant A no contexto do Tenant B
+        await withTenant(tenantBId, async (tx) => {
+            const deleted = await tx
+                .delete(services)
+                .where(eq(services.id, serviceAId))
+                .returning();
+
+            expect(deleted.length).toBe(0);
+        });
+    });
+
+    it('4. Deve tratar concorrência impedindo dois agendamentos idênticos no mesmo slot', async () => {
+        const slotStartTime = new Date('2026-10-10T14:00:00Z');
+        const slotEndTime = new Date('2026-10-10T14:30:00Z');
+
+        let serviceId = '';
+        let customerId = '';
+
+        // 1. Criar os registros vinculados de Serviço e Cliente que o schema exige
+        await withTenant(tenantAId, async (tx) => {
+            const [s] = await tx
+                .insert(services)
+                .values({
+                    tenantId: tenantAId,
+                    name: 'Corte Concorrente',
+                    durationMinutes: 30,
+                    price: '50.00',
+                })
+                .returning();
+
+            const [c] = await tx
+                .insert(customers)
+                .values({
+                    tenantId: tenantAId,
+                    name: 'Cliente Concorrente',
+                    phone: `119${Date.now().toString().slice(-8)}`,
+                })
+                .returning();
+
+            if (!s || !c) {
+                throw new Error('Falha ao preparar massa de dados para o teste de concorrência.');
+            }
+
+            serviceId = s.id;
+            customerId = c.id;
+        });
+
+        // 2. Função de criação do agendamento
+        const createAppointment = () =>
+            withTenant(tenantAId, async (tx) => {
+                return tx.insert(appointments).values({
+                    tenantId: tenantAId,
+                    customerId: customerId,
+                    serviceId: serviceId,
+                    startTime: slotStartTime,
+                    endTime: slotEndTime,
+                    status: 'PENDENTE',
+                });
+            });
+
+        // 3. Executar as duas inserções exatamente no mesmo milissegundo via Promise.allSettled
+        const results = await Promise.allSettled([createAppointment(), createAppointment()]);
+
+        const fulfilled = results.filter((r) => r.status === 'fulfilled');
+        const rejected = results.filter((r) => r.status === 'rejected');
+
+        // Uma operação deve ter sucesso e a concorrente deve falhar ou ser rejeitada
+        expect(fulfilled.length).toBe(1);
+        expect(rejected.length).toBe(1);
+    });
+});
+
+--- FILE: backend/src/shared/errors/AppError.ts ---
+
+export class AppError {
+    public readonly message: string;
+    public readonly statusCode: number;
+    public readonly code: string;
+
+    constructor(message: string, statusCode = 400, code = 'BAD_REQUEST') {
+        this.message = message;
+        this.statusCode = statusCode;
+        this.code = code;
+    }
+}
+
+--- FILE: backend/src/shared/middlewares/authorizeRole.ts ---
+
+import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../errors/AppError.js';
+
+export function authorizeRole(allowedRoles: Array<'ADMIN' | 'PROFESSIONAL'>) {
+    return (request: Request, _response: Response, next: NextFunction): void => {
+        if (!request.user) {
+            throw new AppError('Usuário não autenticado.', 401, 'UNAUTHORIZED');
+        }
+
+        if (!allowedRoles.includes(request.user.role)) {
+            throw new AppError(
+                'Acesso negado. Permissão insuficiente para esta operação.',
+                403,
+                'FORBIDDEN'
+            );
+        }
+
+        return next();
+    };
+}
+
+--- FILE: backend/src/shared/middlewares/ensureAuthenticated.ts ---
+
+import { Request, Response, NextFunction } from 'express';
+import { AuthProvider } from '../providers/AuthProvider.js';
+import { AppError } from '../errors/AppError.js';
+
+export function ensureAuthenticated(
+    request: Request,
+    _response: Response,
+    next: NextFunction
+): void {
+    const authHeader = request.headers.authorization;
+
+    if (!authHeader) {
+        throw new AppError('Token de autenticação não fornecido.', 401, 'UNAUTHORIZED');
+    }
+
+    // O formato esperado do cabeçalho é: "Bearer <token>"
+    const parts = authHeader.split(' ');
+
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+        throw new AppError('Formato do token inválido.', 401, 'INVALID_TOKEN_FORMAT');
+    }
+
+    const token = parts[1];
+
+    // 💡 VALIDAÇÃO ADICIONADA: Elimina o aviso de 'undefined' para o TypeScript
+    if (!token) {
+        throw new AppError('Token de autenticação ausente.', 401, 'INVALID_TOKEN');
+    }
+
+    try {
+        const decoded = AuthProvider.verifyToken(token);
+
+        // Injeta as informações do usuário autenticado e seu tenant na requisição
+        request.user = {
+            id: decoded.sub,
+            tenantId: decoded.tenantId,
+            role: decoded.role,
+        };
+
+        return next();
+    } catch {
+        throw new AppError('Token inválido ou expirado.', 401, 'INVALID_TOKEN');
+    }
+}
+
+--- FILE: backend/src/shared/middlewares/errorHandler.ts ---
+
+import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
+import { AppError } from '../errors/AppError.js';
+
+export function errorHandler(
+    error: Error,
+    _request: Request,
+    response: Response,
+    next: NextFunction
+) {
+    void next;
+    // Erros conhecidos de regra de negócio (AppError)
+    if (error instanceof AppError) {
+        return response.status(error.statusCode).json({
+            success: false,
+            error: {
+                code: error.code,
+                message: error.message,
+            },
+        });
+    }
+
+    // Erros de Validação do Zod
+    if (error instanceof ZodError) {
+        return response.status(400).json({
+            success: false,
+            error: {
+                code: 'VALIDATION_ERROR',
+                message: 'Dados de entrada inválidos.',
+                details: error.errors.map((err) => ({
+                    field: err.path.join('.'),
+                    message: err.message,
+                })),
+            },
+        });
+    }
+
+    // Erros Não Tratados (500)
+    console.error('CRITICAL UNHANDLED ERROR:', error);
+    return response.status(500).json({
+        success: false,
+        error: {
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Ocorreu um erro interno inesperado no servidor.',
+        },
+    });
+}
+
+--- FILE: backend/src/shared/middlewares/rateLimiter.ts ---
+
+import rateLimit from 'express-rate-limit';
+
+export const publicRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // Janela de 15 minutos
+    max: 100, // Limite de 100 requisições por IP por janela
+    standardHeaders: true, // Retorna os cabeçalhos 'RateLimit-*' no padrão IETF
+    legacyHeaders: false, // Desabilita os cabeçalhos antigos 'X-RateLimit-*'
+    message: {
+        success: false,
+        error: {
+            code: 'TOO_MANY_REQUESTS',
+            message: 'Muitas requisições originadas deste IP. Tente novamente em 15 minutos.',
+        },
+    },
+});
+
+--- FILE: backend/src/shared/middlewares/setTenantContext.ts ---
+
+import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../errors/AppError.js';
+
+export async function setTenantContext(
+    request: Request,
+    _response: Response,
+    next: NextFunction
+): void {
+    const tenantId = request.user?.tenantId;
+
+    if (!tenantId) {
+        throw new AppError('Contexto de tenant não encontrado na requisição.', 403, 'MISSING_TENANT_CONTEXT');
+    }
+
+    // O contexto RLS deve envolver a consulta no controller/use case.
+    // Abrir a transacao aqui encerraria o contexto antes da execucao assincrona da rota.
+    next();
+}
+
+--- FILE: backend/src/shared/providers/AuthProvider.ts ---
+
+import bcrypt from 'bcryptjs';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import { env } from '../../config/env.js';
+
+export interface TokenPayload {
+    sub: string;        // ID do Usuário
+    tenantId: string;   // ID do Tenant
+    role: 'ADMIN' | 'PROFESSIONAL';
+}
+
+export class AuthProvider {
+    static async hashPassword(password: string): Promise<string> {
+        return bcrypt.hash(password, 8);
+    }
+
+    static async comparePassword(password: string, hash: string): Promise<boolean> {
+        return bcrypt.compare(password, hash);
+    }
+
+    static generateToken(payload: TokenPayload): string {
+        // 💡 As opções de expiração DEVEM ficar no terceiro parâmetro do jwt.sign
+        const options: SignOptions = {
+            expiresIn: env.JWT_EXPIRES_IN as unknown as SignOptions['expiresIn'],
+        };
+
+        return jwt.sign(payload, env.JWT_SECRET, options);
+    }
+
+    static verifyToken(token: string): TokenPayload {
+        return jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+    }
+}
