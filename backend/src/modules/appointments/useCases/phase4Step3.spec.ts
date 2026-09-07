@@ -4,7 +4,7 @@ import express from 'express';
 import { errorHandler } from '../../../shared/middlewares/errorHandler.js';
 import { AuthProvider } from '../../../shared/providers/AuthProvider.js';
 import { db, withTenant } from '../../../db/client.js';
-import { services, tenants, users } from '../../../db/schema.js';
+import { scheduleConfigs, services, tenants, users } from '../../../db/schema.js';
 import { routes } from '../../../routes/index.js';
 
 const app = express();
@@ -18,6 +18,7 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
     let serviceId = '';
     let adminToken = '';
     let appointmentId = '';
+    let replacementAppointmentId = '';
     let targetStartTime = '';
 
     beforeAll(async () => {
@@ -42,6 +43,16 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
                 throw new Error('Serviço não foi criado');
             }
             serviceId = service.id;
+
+            for (let day = 0; day <= 6; day++) {
+                await tx.insert(scheduleConfigs).values({
+                    tenantId,
+                    dayOfWeek: day,
+                    openTime: '08:00',
+                    closeTime: '18:00',
+                    isClosed: false,
+                });
+            }
         });
 
         const targetDate = new Date();
@@ -77,6 +88,23 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
         expect(response.status).toBe(409);
         expect(response.body.success).toBe(false);
         expect(response.body.error.code).toBe('SLOT_UNAVAILABLE');
+    });
+
+    it('2.1. [PUBLIC] Deve rejeitar agendamento para mais de 30 dias (400 Bad Request)', async () => {
+        const farFuture = new Date();
+        farFuture.setDate(farFuture.getDate() + 35);
+        farFuture.setUTCHours(14, 0, 0, 0);
+
+        const response = await request(app)
+            .post(`/api/v1/public/tenants/${tenantSlug}/appointments`)
+            .send({
+                serviceId,
+                startTime: farFuture.toISOString(),
+                customer: { name: 'Cliente Futuro', phone: '11966664444' },
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('DATE_OUT_OF_RANGE');
     });
 
     it('3. [ADMIN] Deve confirmar o agendamento PENDENTE -> CONFIRMADO (200 OK)', async () => {
@@ -118,9 +146,42 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
         );
     });
 
-    it('6. [ADMIN] Deve concluir atendimento CONFIRMADO -> CONCLUIDO (200 OK)', async () => {
+    it('6. [ADMIN] Deve cancelar atendimento CONFIRMADO -> CANCELADO (200 OK)', async () => {
         const response = await request(app)
             .patch(`/api/v1/admin/appointments/${appointmentId}/status`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ status: 'CANCELADO' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe('CANCELADO');
+    });
+
+    it('7. [PUBLIC] Deve liberar o slot depois do cancelamento (201 Created)', async () => {
+        const response = await request(app)
+            .post(`/api/v1/public/tenants/${tenantSlug}/appointments`)
+            .send({
+                serviceId,
+                startTime: targetStartTime,
+                customer: { name: 'Novo Cliente', phone: '11966665555' },
+            });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+        expect(response.body.data.status).toBe('PENDENTE');
+        replacementAppointmentId = response.body.data.id;
+    });
+
+    it('8. [ADMIN] Deve concluir atendimento CONFIRMADO -> CONCLUIDO (200 OK)', async () => {
+        const confirmResponse = await request(app)
+            .patch(`/api/v1/admin/appointments/${replacementAppointmentId}/status`)
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ status: 'CONFIRMADO' });
+
+        expect(confirmResponse.status).toBe(200);
+
+        const response = await request(app)
+            .patch(`/api/v1/admin/appointments/${replacementAppointmentId}/status`)
             .set('Authorization', `Bearer ${adminToken}`)
             .send({ status: 'CONCLUIDO' });
 
