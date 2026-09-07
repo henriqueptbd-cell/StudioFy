@@ -15,18 +15,15 @@ O repositório é organizado de forma modular para separação clara de responsa
 ├── backend/    # API REST em Node.js + Express + TypeScript
 ├── frontend/   # Aplicação Web React + TypeScript + Tailwind CSS (Mobile-First)
 ├── database/   # Schemas, Migrations e Scripts PostgreSQL (Neon DB)
-└── docs/       # Documentação de Arquitetura, Requisitos e Diagramas
-
+└── docs/       # Documentação de Arquitetura, Requisitos, APIs e Diagramas
 ```
-
-Para detalhes sobre as decisões técnicas e padrões de código, consulte o [ARCHITECTURE.md](./docs/ARCHITECTURE.md). Os requisitos de segurança estão no [SECURITY_AND_PRIVACY.md](./docs/SECURITY_AND_PRIVACY.md), e o planejamento executável está no [ROADMAP.md](./docs/ROADMAP.md).
 
 ---
 
 ## 🛠️ Tech Stack Geral
 
 - **Frontend:** React, TypeScript, Tailwind CSS, TanStack Query (React Query)
-- **Backend:** Node.js, Express, TypeScript, Zod, JWT
+- **Backend:** Node.js, Express, TypeScript, Zod, JWT, Vitest, Supertest
 - **Database:** PostgreSQL (Neon DB) com Drizzle ORM
 - **Comunicação:** Integração via links dinâmicos do WhatsApp (`wa.me`)
 
@@ -38,7 +35,7 @@ Para detalhes sobre as decisões técnicas e padrões de código, consulte o [AR
 
 - Node.js (v18+ recomendado)
 - npm, yarn ou pnpm
-- Instância do PostgreSQL (ou conta no [Neon DB](https://www.google.com/search?q=https://neon.tech))
+- Instância do PostgreSQL ou conta no [Neon DB](https://www.google.com/search?q=https://neon.tech)
 
 ### Passo a Passo
 
@@ -56,31 +53,41 @@ cd studiofy
 npm install
 npm install --prefix backend
 npm install --prefix frontend
+
 ```
 
-3. **Configurar o Banco de Dados:**
-   Consulte as instruções em [database/readme.md](./database/readme.md). Os scripts oficiais serão definidos na Fase 1.
-4. **Executar o Backend:**
+3. **Configurar as Variáveis de Ambiente:**
+   Crie o arquivo `.env` dentro da pasta `backend/` seguindo o exemplo de `backend/.env.example`.
+4. **Executar Migrações e Seed do Banco de Dados:**
 
 ```bash
 cd backend
-npm install
+npm run db:migrate
+npm run seed
+
+```
+
+5. **Executar o Backend em Modo Dev:**
+
+```bash
 npm run dev
 
 ```
 
-Instruções detalhadas em [backend/readme.md](./backend/readme.md).
+6. **Executar a Suíte de Testes Automatizados:**
 
-5. **Executar o Frontend:**
+```bash
+npm test
+
+```
+
+7. **Executar o Frontend:**
 
 ```bash
 cd ../frontend
-npm install
 npm run dev
 
 ```
-
-Instruções detalhadas em [frontend/readme.md](./frontend/readme.md).
 
 ---
 
@@ -92,6 +99,24 @@ Instruções detalhadas em [frontend/readme.md](./frontend/readme.md).
 
 ---
 
-## 📄 Documentação
+## 📄 Documentação Técnica
 
-As decisões e tarefas pendentes estão registradas em [docs/ROADMAP.md](./docs/ROADMAP.md).
+Todas as especificações técnicas, decisões de engenharia e cronogramas estão centralizados na pasta [`/docs`](./docs):
+
+- 🏛️ **[ARCHITECTURE.md](docs/ARCHITECTURE.md):** Visão arquitetural, componentes e stack técnica.
+- 🗄️ **[DATABASE_MODEL.md](docs/DATABASE_MODEL.md):** Diagrama ERD (Mermaid), máquina de estados e regras de RLS.
+- 🌐 **[API_SPECIFICATION.md](docs/API_SPECIFICATION.md):** Contrato completo de rotas públicos e administrativos da API REST.
+- 🔐 **[SECURITY_AND_PRIVACY.md](docs/SECURITY_AND_PRIVACY.md):** Diretrizes de LGPD, isolamento multi-tenant e autenticação JWT.
+- 🧪 **[TESTING.md](docs/TESTING.md):** Estrutura e instrução para execução dos testes automatizados.
+- 🗺️ **[ROADMAP.md](docs/ROADMAP.md):** Checklist de progresso e planejamento executável das fases do MVP.
+- 📋 **[visao_do_produto.md](docs/visao_do_produto.md):** Escopo funcional, personas e regras do negócio.
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença [MIT](https://www.google.com/search?q=./LICENSE).
+
+```
+
+```
