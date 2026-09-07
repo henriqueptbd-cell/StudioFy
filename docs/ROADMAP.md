@@ -111,9 +111,9 @@ Testes, endurecimento e deploy
 
 ### 4.1. API publica
 
-- [ ] Buscar dados publicos do tenant pelo slug.
-- [ ] Listar servicos ativos do tenant.
-- [ ] Consultar horarios disponiveis para uma data e um servico.
+- [x] Buscar dados publicos do tenant pelo slug.
+- [x] Listar servicos ativos do tenant.
+- [x] Consultar horarios disponiveis para uma data e um servico.
 - [ ] Validar nome, telefone, servico, data, horario e limite de antecedencia.
 - [ ] Criar solicitacao publica com status inicial `PENDENTE`.
 - [ ] Fazer a criacao de forma atomica, rejeitando conflitos mesmo sob concorrencia.

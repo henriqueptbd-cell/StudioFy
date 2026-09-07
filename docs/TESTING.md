@@ -49,7 +49,7 @@ Ele cobre o fluxo integrado da Fase 3:
 - rejeicao de rota protegida sem token;
 - acesso de rota protegida com token valido.
 
-A suite atual foi executada com sucesso: **2 arquivos de teste e 9 testes aprovados**.
+A suite atual foi executada com sucesso: **3 arquivos de teste e 16 testes aprovados**.
 
 ## O que este teste garante
 
@@ -79,8 +79,10 @@ Os testes abaixo ja foram executados com sucesso na role restrita da aplicacao:
 
 ### Fase 4 - Agendamentos
 
-- [ ] Listar somente servicos ativos.
-- [ ] Calcular slots respeitando timezone, funcionamento e antecedencia.
+- [x] Buscar tenant publico por slug.
+- [x] Listar somente servicos ativos.
+- [x] Calcular slots respeitando funcionamento, duracao e antecedencia.
+- [ ] Revisar conversao completa de timezone IANA no calculo de slots.
 - [ ] Rejeitar sobreposicao com `PENDENTE` ou `CONFIRMADO`.
 - [ ] Expirar `PENDENTE` no prazo correto.
 - [ ] Validar todas as transicoes de status.
