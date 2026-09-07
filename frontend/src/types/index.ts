@@ -49,6 +49,31 @@ export interface LoginResponse {
     user: AuthUser;
 }
 
+/** Payload usado no cadastro de um novo estabelecimento (provision).
+ *  Cria um tenant + usuário ADMIN juntos no backend. */
+export interface ProvisionTenantPayload {
+    tenant: {
+        name: string;
+        slug: string;
+        phone: string;
+    };
+    admin: {
+        name: string;
+        email: string;
+        password: string;
+    };
+}
+
+export interface ProvisionResponse {
+    token: string;
+    tenant: {
+        id: string;
+        name: string;
+        slug: string;
+    };
+    user: AuthUser;
+}
+
 export interface AppointmentUser {
     id: string;
     name: string;
