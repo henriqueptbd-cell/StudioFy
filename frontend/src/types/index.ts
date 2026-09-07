@@ -115,6 +115,30 @@ export type CreateServicePayload = {
     price: number;
 };
 
+// ===== Configurações do estabelecimento =====
+
+export interface TenantSettingsProfile {
+    id: string;
+    name: string;
+    slug: string;
+    phone: string;
+    timezone: string;
+    logoUrl?: string | null;
+    primaryColor?: string | null;
+}
+
+export interface ScheduleDay {
+    dayOfWeek: number; // 0 = Domingo ... 6 = Sábado
+    openTime: string; // "HH:MM"
+    closeTime: string; // "HH:MM"
+    isClosed: boolean;
+}
+
+export interface TenantSettings {
+    tenant: TenantSettingsProfile;
+    schedule: ScheduleDay[];
+}
+
 // ===== Payloads de criação =====
 
 export interface CreateAppointmentPayload {

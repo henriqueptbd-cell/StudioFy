@@ -4,6 +4,9 @@ import { ListServicesController } from '../modules/services/useCases/listService
 import { UpdateAppointmentStatusController } from '../modules/appointments/useCases/UpdateAppointmentStatusController.js';
 import { ListAppointmentsController } from '../modules/appointments/useCases/listAppointments/ListAppointmentsController.js';
 import { expirePendingAppointments } from '../modules/appointments/jobs/ExpireAppointmentsJob.js';
+import { GetSettingsController } from '../modules/settings/useCases/getSettings/GetSettingsController.js';
+import { UpdateProfileController } from '../modules/settings/useCases/updateProfile/UpdateProfileController.js';
+import { SaveScheduleController } from '../modules/settings/useCases/saveSchedule/SaveScheduleController.js';
 import { ensureAuthenticated } from '../shared/middlewares/ensureAuthenticated.js';
 import { setTenantContext } from '../shared/middlewares/setTenantContext.js';
 import { authorizeRole } from '../shared/middlewares/authorizeRole.js';
@@ -13,6 +16,9 @@ const createServiceController = new CreateServiceController();
 const listServicesController = new ListServicesController();
 const updateAppointmentStatusController = new UpdateAppointmentStatusController();
 const listAppointmentsController = new ListAppointmentsController();
+const getSettingsController = new GetSettingsController();
+const updateProfileController = new UpdateProfileController();
+const saveScheduleController = new SaveScheduleController();
 
 adminRoutes.use('/api/v1/admin', ensureAuthenticated, setTenantContext);
 
@@ -29,6 +35,18 @@ adminRoutes.get('/api/v1/admin/services', authorizeRole(['ADMIN', 'PROFESSIONAL'
 
 adminRoutes.post('/api/v1/admin/services', authorizeRole(['ADMIN']), (req, res, next) => {
     createServiceController.handle(req, res).catch(next);
+});
+
+adminRoutes.get('/api/v1/admin/settings', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {
+    getSettingsController.handle(req, res).catch(next);
+});
+
+adminRoutes.put('/api/v1/admin/settings/profile', authorizeRole(['ADMIN']), (req, res, next) => {
+    updateProfileController.handle(req, res).catch(next);
+});
+
+adminRoutes.put('/api/v1/admin/settings/schedule', authorizeRole(['ADMIN']), (req, res, next) => {
+    saveScheduleController.handle(req, res).catch(next);
 });
 
 adminRoutes.patch('/api/v1/admin/appointments/:id/status', authorizeRole(['ADMIN']), (req, res, next) => {

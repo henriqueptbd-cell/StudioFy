@@ -37,14 +37,27 @@ interface BookingProviderProps {
 }
 
 export const BookingProvider: React.FC<BookingProviderProps> = ({ tenant, slug, children }) => {
-  const [service, setService] = useState<Service | null>(null);
+  const [service, setServiceState] = useState<Service | null>(null);
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [customer, setCustomer] = useState({ name: '', phone: '' });
   const [confirmation, setConfirmation] = useState<BookingConfirmation | null>(null);
 
+  // Ao escolher um serviço diferente, inicia um novo fluxo (zera data/hora e
+  // dados do serviço anterior), pois cada serviço possui seus próprios slots.
+  const setService = useCallback((next: Service) => {
+    setServiceState((prev) => {
+      if (prev?.id !== next.id) {
+        setDate(null);
+        setTime(null);
+        setCustomer({ name: '', phone: '' });
+      }
+      return next;
+    });
+  }, []);
+
   const reset = useCallback(() => {
-    setService(null);
+    setServiceState(null);
     setDate(null);
     setTime(null);
     setCustomer({ name: '', phone: '' });
