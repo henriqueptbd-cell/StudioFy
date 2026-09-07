@@ -115,16 +115,16 @@ Testes, endurecimento e deploy
 - [x] Listar servicos ativos do tenant.
 - [x] Consultar horarios disponiveis para uma data e um servico.
 - [ ] Validar nome, telefone, servico, data, horario e limite de antecedencia.
-- [ ] Criar solicitacao publica com status inicial `PENDENTE`.
+- [x] Criar solicitacao publica com status inicial `PENDENTE`.
 - [ ] Fazer a criacao de forma atomica, rejeitando conflitos mesmo sob concorrencia.
-- [ ] Bloquear sobreposicoes com agendamentos `PENDENTE` ou `CONFIRMADO`, considerando a duracao real do servico.
+- [x] Bloquear sobreposicoes com agendamentos `PENDENTE` ou `CONFIRMADO`, considerando a duracao real do servico.
 - [ ] Criar rotina para expirar solicitacoes `PENDENTE` em 12 horas ou 1 hora antes do atendimento, o que ocorrer primeiro.
 
 ### 4.2. API autenticada minima
 
 - [ ] Listar a agenda por dia e semana, respeitando o papel do usuario.
-- [ ] Confirmar solicitacao: `PENDENTE` -> `CONFIRMADO`.
-- [ ] Recusar solicitacao: `PENDENTE` -> `RECUSADO`.
+- [x] Confirmar solicitacao: `PENDENTE` -> `CONFIRMADO`.
+- [x] Rejeitar transicao invalida: `CONFIRMADO` -> `RECUSADO`.
 - [ ] Cancelar agendamento conforme a regra definida na Fase 0.
 - [ ] Permitir cancelamento pelo profissional ou administrador em qualquer status operacional permitido.
 - [ ] Concluir atendimento: `CONFIRMADO` -> `CONCLUIDO`.
@@ -134,8 +134,8 @@ Testes, endurecimento e deploy
 
 - [ ] Exibir somente servicos ativos, dias de funcionamento e horarios sem sobreposicao com `PENDENTE` ou `CONFIRMADO`.
 - [ ] Aceitar somente nome e telefone valido com DDD no formulario publico.
-- [ ] Criar novos pedidos com status `PENDENTE` e registrar `expires_at`.
-- [ ] Confirmar bloqueia o intervalo; recusar libera imediatamente o horario.
+- [x] Criar novos pedidos com status `PENDENTE` e registrar `expires_at`.
+- [x] Confirmar bloqueia o intervalo; transicoes invalidas sao rejeitadas.
 - [ ] Expirar `PENDENTE` libera o horario e altera o status para `CANCELADO`.
 - [ ] Concluir apenas registra o historico e nao altera disponibilidade futura.
 - [ ] Cancelar um agendamento libera o intervalo para novas solicitacoes.

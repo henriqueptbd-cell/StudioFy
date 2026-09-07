@@ -49,7 +49,7 @@ Ele cobre o fluxo integrado da Fase 3:
 - rejeicao de rota protegida sem token;
 - acesso de rota protegida com token valido.
 
-A suite atual foi executada com sucesso: **3 arquivos de teste e 16 testes aprovados**.
+A suite atual foi executada com sucesso: **4 arquivos de teste e 20 testes aprovados**.
 
 ## O que este teste garante
 
@@ -82,10 +82,24 @@ Os testes abaixo ja foram executados com sucesso na role restrita da aplicacao:
 - [x] Buscar tenant publico por slug.
 - [x] Listar somente servicos ativos.
 - [x] Calcular slots respeitando funcionamento, duracao e antecedencia.
+- [x] Criar agendamento publico com status `PENDENTE`.
+- [x] Rejeitar agendamento duplicado no mesmo slot.
+- [x] Confirmar agendamento: `PENDENTE` -> `CONFIRMADO`.
+- [x] Rejeitar transicao invalida: `CONFIRMADO` -> `RECUSADO`.
 - [ ] Revisar conversao completa de timezone IANA no calculo de slots.
-- [ ] Rejeitar sobreposicao com `PENDENTE` ou `CONFIRMADO`.
+- [x] Rejeitar duplicidade e sobreposicao com `PENDENTE` ou `CONFIRMADO`.
 - [ ] Expirar `PENDENTE` no prazo correto.
 - [ ] Validar todas as transicoes de status.
+
+### Passo 3 da Fase 4
+
+O teste `backend/src/modules/appointments/useCases/phase4Step3.spec.ts` cobre o
+fluxo de criacao e transicao inicial do agendamento:
+
+- criacao publica com status `PENDENTE`;
+- rejeicao de solicitacao duplicada no mesmo slot;
+- confirmacao administrativa para `CONFIRMADO`;
+- rejeicao de transicao invalida para `RECUSADO`.
 
 ### Frontend e operacao
 

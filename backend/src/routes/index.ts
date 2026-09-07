@@ -8,6 +8,8 @@ import { setTenantContext } from '../shared/middlewares/setTenantContext.js';
 import { authorizeRole } from '../shared/middlewares/authorizeRole.js';
 import { publicRateLimiter } from '../shared/middlewares/rateLimiter.js';
 import { GetAvailableSlotsController } from '../modules/appointments/useCases/getAvailableSlots/GetAvailableSlotsController.js';
+import { CreateAppointmentController } from '../modules/appointments/useCases/CreateAppointmentController.js';
+import { UpdateAppointmentStatusController } from '../modules/appointments/useCases/UpdateAppointmentStatusController.js';
 
 const routes = Router();
 
@@ -16,6 +18,8 @@ const loginController = new LoginController();
 const createServiceController = new CreateServiceController();
 const getPublicTenantController = new GetPublicTenantController();
 const getAvailableSlotsController = new GetAvailableSlotsController();
+const createAppointmentController = new CreateAppointmentController();
+const updateAppointmentStatusController = new UpdateAppointmentStatusController();
 
 // 🟢 Rotas Públicas
 routes.post('/api/v1/public/tenants/provision', publicRateLimiter, (req, res, next) => {
@@ -24,6 +28,11 @@ routes.post('/api/v1/public/tenants/provision', publicRateLimiter, (req, res, ne
 
 routes.post('/api/v1/auth/login', publicRateLimiter, (req, res, next) => {
     loginController.handle(req, res).catch(next);
+});
+
+// 🟢 Rota Pública - Criar Agendamento
+routes.post('/api/v1/public/tenants/:slug/appointments', publicRateLimiter, (req, res, next) => {
+    createAppointmentController.handle(req, res).catch(next);
 });
 
 // Dados públicos do estabelecimento e seus serviços ativos
@@ -53,6 +62,11 @@ routes.get('/api/v1/admin/dashboard', authorizeRole(['ADMIN']), (req, res) => {
 
 routes.post('/api/v1/admin/services', authorizeRole(['ADMIN']), (req, res, next) => {
     createServiceController.handle(req, res).catch(next);
+});
+
+// 🟠 Rota Autenticada Admin - Transições de Status
+routes.patch('/api/v1/admin/appointments/:id/status', authorizeRole(['ADMIN']), (req, res, next) => {
+    updateAppointmentStatusController.handle(req, res).catch(next);
 });
 
 export { routes };
