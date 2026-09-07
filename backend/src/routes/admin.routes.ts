@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { CreateServiceController } from '../modules/services/useCases/createService/CreateServiceController.js';
+import { ListServicesController } from '../modules/services/useCases/listServices/ListServicesController.js';
 import { UpdateAppointmentStatusController } from '../modules/appointments/useCases/UpdateAppointmentStatusController.js';
 import { ListAppointmentsController } from '../modules/appointments/useCases/listAppointments/ListAppointmentsController.js';
 import { expirePendingAppointments } from '../modules/appointments/jobs/ExpireAppointmentsJob.js';
@@ -9,6 +10,7 @@ import { authorizeRole } from '../shared/middlewares/authorizeRole.js';
 
 const adminRoutes = Router();
 const createServiceController = new CreateServiceController();
+const listServicesController = new ListServicesController();
 const updateAppointmentStatusController = new UpdateAppointmentStatusController();
 const listAppointmentsController = new ListAppointmentsController();
 
@@ -19,6 +21,10 @@ adminRoutes.get('/api/v1/admin/dashboard', authorizeRole(['ADMIN']), (req, res) 
         success: true,
         message: `Acesso concedido com RLS ativo para o Admin ${req.user?.id} no Tenant ${req.user?.tenantId}`,
     });
+});
+
+adminRoutes.get('/api/v1/admin/services', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {
+    listServicesController.handle(req, res).catch(next);
 });
 
 adminRoutes.post('/api/v1/admin/services', authorizeRole(['ADMIN']), (req, res, next) => {

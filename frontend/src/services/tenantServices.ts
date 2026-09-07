@@ -1,9 +1,15 @@
 import { api } from '@/services/api';
-import { CreateServicePayload, Service } from '@/types';
+import { AdminService, CreateServicePayload, Service } from '@/types';
 
 /** Cadastra um novo serviço (requer token de ADMIN). */
 export async function createSessionService(payload: CreateServicePayload): Promise<Service> {
     const res = await api.post('/admin/services', payload);
+    return res.data.data;
+}
+
+/** Lista os serviços do estabelecimento logado (inclui serviços inativos). */
+export async function fetchAdminServices(): Promise<AdminService[]> {
+    const res = await api.get('/admin/services');
     return res.data.data;
 }
 

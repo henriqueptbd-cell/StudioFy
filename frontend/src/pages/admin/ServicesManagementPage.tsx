@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ClipboardList, Timer } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { createSessionService } from '@/services/tenantServices';
+import { createSessionService, fetchAdminServices } from '@/services/tenantServices';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { formatCurrency } from '@/utils/format';
 
 interface FormState {
   name: string;
@@ -22,10 +24,20 @@ const initial: FormState = {
 
 export const ServicesManagementPage: React.FC = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(initial);
   const [saving, setSaving] = useState(false);
 
   const canCreate = user?.role === 'ADMIN';
+
+  const {
+    data: services = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['admin-services'],
+    queryFn: fetchAdminServices,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +57,7 @@ export const ServicesManagementPage: React.FC = () => {
       });
       toast.success('Serviço cadastrado com sucesso!');
       setForm(initial);
+      await queryClient.invalidateQueries({ queryKey: ['admin-services'] });
     } catch {
       toast.error('Não foi possível cadastrar o serviço.');
     } finally {
@@ -117,10 +130,62 @@ export const ServicesManagementPage: React.FC = () => {
         </div>
       </form>
 
-      <div className="mt-5 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-500">
-        💡 A listagem, edição e ativação/desativação de serviços serão habilitadas quando a API
-        administrativa de serviços estiver completa. O cadastro acima já funciona.
-      </div>
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-zinc-900">Serviços cadastrados</h2>
+          <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-600">
+            {services.length}
+          </span>
+        </div>
+
+        {isLoading ? (
+          <p className="py-6 text-center text-sm text-zinc-400">Carregando serviços...</p>
+        ) : error ? (
+          <p className="py-6 text-center text-sm text-red-500">Falha ao carregar os serviços.</p>
+        ) : services.length === 0 ? (
+          <div className="mx-auto max-w-sm rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center">
+            <ClipboardList className="mx-auto size-9 text-zinc-300" />
+            <p className="mt-3 text-sm font-semibold text-zinc-700">Nenhum serviço cadastrado</p>
+            <p className="mt-1 text-xs text-zinc-400">
+              Cadastre o primeiro serviço acima para começar a receber agendamentos.
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {services.map((service) => (
+              <li
+                key={service.id}
+                className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-zinc-900">{service.name}</p>
+                    <p className="mt-0.5 text-xs font-medium text-emerald-600">
+                      {formatCurrency(service.price)}
+                    </p>
+                    {service.description ? (
+                      <p className="mt-1 text-xs text-zinc-500">{service.description}</p>
+                    ) : null}
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      service.active
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-zinc-100 text-zinc-500'
+                    }`}
+                  >
+                    {service.active ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-400">
+                  <Timer className="size-3.5" />
+                  {service.durationMinutes} min
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };

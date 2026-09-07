@@ -80,6 +80,16 @@ export interface AppointmentUser {
     phone: string;
 }
 
+/** Serviço no contexto administrativo (inclui flag de ativação). */
+export interface AdminService {
+    id: string;
+    name: string;
+    description?: string | null;
+    durationMinutes: number;
+    price: string;
+    active: boolean;
+}
+
 export interface AppointmentService {
     id: string;
     name: string;
