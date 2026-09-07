@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --primary-color: #15803d;
+    --secondary-color: #1e293b;
+}
+
+@layer base {
+    body {
+        @apply bg-zinc-50 text-zinc-900 antialiased min-h-screen;
+        font-feature-settings: 'rlig' 1, 'calt' 1;
+    }
+
+    * {
+        @apply border-zinc-200;
+    }
+}
+
+@layer utilities {
+    .scrollbar-hidden::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hidden {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
