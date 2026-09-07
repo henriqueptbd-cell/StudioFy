@@ -195,9 +195,24 @@ Testes, endurecimento e deploy
 
 ## Backlog pos-MVP
 
+##### 📩 Convite de Profissionais via WhatsApp
+- [ ] **Modelagem:** Criar a tabela `invitations` (`tenant_id`, `email`, `name`, `phone`, `token`, `status`, `expires_at`).
+- [ ] **Backend (API):**
+  - [ ] Implementar `POST /api/v1/admin/invitations` (Auth ADMIN, validações Zod, geração de token UUID/JWT e montagem de link wa.me).
+  - [ ] Implementar `GET /api/v1/public/invitations/validate` (Pública, valida status `PENDING` e expiração).
+  - [ ] Implementar `POST /api/v1/public/invitations/accept` (Pública, criação do usuário `PROFESSIONAL` e atualização do status para `ACCEPTED`).
+- [ ] **Frontend (Web):**
+  - [ ] Interface no painel admin para inserção de dados do profissional com ação de copiar/abrir link do WhatsApp.
+  - [ ] Página pública `/accept-invite?token=...` para definição de senha.
+  - [ ] Tratamento de token inválido/expirado.
+
+
+
 - [ ] Notificacoes automaticas via API oficial do WhatsApp.
 - [ ] Pagamentos online de sinal ou reserva.
 - [ ] Escolha de profissional pelo cliente.
 - [ ] Disponibilidade individual por profissional.
 - [ ] Reagendamento pelo cliente.
 - [ ] Historico detalhado e relatorios financeiros.
+
+
