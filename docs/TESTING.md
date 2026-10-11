@@ -91,7 +91,7 @@ Os testes abaixo ja foram executados com sucesso na role restrita da aplicacao:
 - [x] Listar a agenda autenticada com dados do cliente e link `wa.me`.
 - [x] Cancelar agendamento e liberar o slot para nova reserva.
 - [x] Concluir atendimento: `CONFIRMADO` -> `CONCLUIDO`.
-- [ ] Revisar conversao completa de timezone IANA no calculo de slots.
+- [x] Revisar conversao completa de timezone IANA no calculo de slots.
 - [x] Rejeitar duplicidade e sobreposicao com `PENDENTE` ou `CONFIRMADO`.
 - [ ] Testar expiração de `PENDENTE` pelo endpoint administrativo.
 - [ ] Validar todas as transicoes de status.
@@ -105,6 +105,20 @@ fluxo de criacao e transicao inicial do agendamento:
 - rejeicao de solicitacao duplicada no mesmo slot;
 - confirmacao administrativa para `CONFIRMADO`;
 - rejeicao de transicao invalida para `RECUSADO`.
+
+### Fuso horario do tenant
+
+O teste `backend/src/shared/utils/timezone.spec.ts` cobre a conversao entre o
+relogio local do tenant e o instante UTC:
+
+- conversao de horario local para UTC no fuso `America/Sao_Paulo`;
+- conversao de meia-noite como inicio do dia local;
+- conversao em um fuso diferente (`America/Manaus`);
+- conversao reversa de UTC para horario local;
+- datas proximas da virada do dia nao deslocam o calendario do tenant.
+
+Os testes fixam o fuso de cada conversao explicitamente, de modo que o resultado
+nao depende do fuso do processo que executa a suite.
 
 ### Frontend e operacao
 
