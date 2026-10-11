@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, withTenant } from '../../../../db/client.js';
 import { tenants, services, scheduleConfigs, appointments, customers } from '../../../../db/schema.js';
 import { AppError } from '../../../../shared/errors/AppError.js';
+import { utcToZoned, zonedToUtc } from '../../../../shared/utils/timezone.js';
 
 interface IRequest {
     slug: string;
@@ -11,11 +12,27 @@ interface IRequest {
     customerPhone: string;
 }
 
+const SCHEDULE_TIME_PATTERN = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
+
+/** "HH:MM" ou "HH:MM:SS" (Postgres) -> "HH:MM". */
+function toHHMM(value: string): string {
+    const match = SCHEDULE_TIME_PATTERN.exec(value.trim());
+
+    if (!match) {
+        throw new AppError('Formato de horário inválido. Use HH:MM', 400, 'INVALID_TIME_FORMAT');
+    }
+
+    const hours = match[1] ?? '00';
+    const minutes = match[2] ?? '00';
+
+    return `${hours.padStart(2, '0')}:${minutes}`;
+}
+
 export class CreateAppointmentUseCase {
     async execute({ slug, serviceId, startTimeIso, customerName, customerPhone }: IRequest) {
         // 1. Validar Tenant pelo Slug
         const [tenant] = await db
-            .select({ id: tenants.id })
+            .select({ id: tenants.id, timezone: tenants.timezone })
             .from(tenants)
             .where(eq(tenants.slug, slug));
 
@@ -55,25 +72,23 @@ export class CreateAppointmentUseCase {
             const endTime = new Date(startTime.getTime() + service.durationMinutes * 60 * 1000);
 
             // O MVP usa o horario geral do estabelecimento como agenda unica.
-            const dayOfWeek = startTime.getUTCDay();
+            // As horas de funcionamento são locais do estabelecimento: convertemos
+            // para os instantes UTC do mesmo dia local antes de comparar.
+            const zonedStart = utcToZoned(startTime, tenant.timezone);
+
             const [schedule] = await tx
                 .select()
                 .from(scheduleConfigs)
-                .where(and(eq(scheduleConfigs.tenantId, tenant.id), eq(scheduleConfigs.dayOfWeek, dayOfWeek)));
+                .where(and(eq(scheduleConfigs.tenantId, tenant.id), eq(scheduleConfigs.dayOfWeek, zonedStart.dayOfWeek)));
 
             if (!schedule || schedule.isClosed) {
                 throw new AppError('Estabelecimento fechado no dia selecionado', 400, 'ESTABLISHMENT_CLOSED');
             }
 
-            const toMinutes = (value: string) => {
-                const [hours, minutes] = value.split(':').map(Number);
-                return hours * 60 + minutes;
-            };
+            const scheduleOpen = zonedToUtc(zonedStart.isoDate, toHHMM(schedule.openTime), tenant.timezone);
+            const scheduleClose = zonedToUtc(zonedStart.isoDate, toHHMM(schedule.closeTime), tenant.timezone);
 
-            const startMinutes = startTime.getUTCHours() * 60 + startTime.getUTCMinutes();
-            const endMinutes = endTime.getUTCHours() * 60 + endTime.getUTCMinutes();
-
-            if (startMinutes < toMinutes(schedule.openTime) || endMinutes > toMinutes(schedule.closeTime)) {
+            if (startTime < scheduleOpen || endTime > scheduleClose) {
                 throw new AppError('O horário selecionado está fora do expediente de funcionamento', 400, 'OUT_OF_BUSINESS_HOURS');
             }
 
@@ -93,12 +108,22 @@ export class CreateAppointmentUseCase {
                 throw new AppError('O horário selecionado não está mais disponível', 409, 'SLOT_UNAVAILABLE');
             }
 
-            // 5. UPSERT simples do Cliente (Nome + Telefone)
+            // 5. Vincular o Cliente. Como não há mais unicidade por telefone, um
+            // mesmo número pode pertencer a vários clientes (nomes diferentes).
+            // Reusamos o registro somente quando nome + telefone coincidem; caso
+            // contrário criamos um novo cliente — preservando o nome correto de
+            // cada agendamento sem alterar históricos.
             let customerId = '';
             const [existingCustomer] = await tx
                 .select({ id: customers.id })
                 .from(customers)
-                .where(and(eq(customers.tenantId, tenant.id), eq(customers.phone, customerPhone)));
+                .where(
+                    and(
+                        eq(customers.tenantId, tenant.id),
+                        eq(customers.phone, customerPhone),
+                        eq(customers.name, customerName),
+                    ),
+                );
 
             if (existingCustomer) {
                 customerId = existingCustomer.id;

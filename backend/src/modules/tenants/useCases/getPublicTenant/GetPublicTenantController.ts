@@ -19,6 +19,7 @@ export class GetPublicTenantController {
                 name: tenants.name,
                 slug: tenants.slug,
                 phone: tenants.phone,
+                timezone: tenants.timezone,
                 logoUrl: tenants.logoUrl,
                 primaryColor: tenants.primaryColor,
             })

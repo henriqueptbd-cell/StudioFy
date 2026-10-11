@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { db, withTenant } from '../../db/client.js';
-import { tenants, services, users, customers, appointments } from '../../db/schema.js';
+import { tenants, services, customers, appointments } from '../../db/schema.js';
 import { eq, sql } from 'drizzle-orm';
 
 describe('Suite de Testes de Banco & Segurança RLS - FASE 2', () => {
