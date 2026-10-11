@@ -150,7 +150,7 @@ Testes, endurecimento e deploy
 - [ ] Configurar tema do tenant por CSS Variables.
 - [ ] Exibir estabelecimento e servicos ativos.
 - [ ] Permitir selecionar data e horario realmente disponivel.
-- [ ] Converter horario local do tenant para UTC antes do envio e formatar respostas UTC no horario local do tenant.
+- [x] Converter horario local do tenant para UTC antes do envio e formatar respostas UTC no horario local do tenant.
 - [ ] Solicitar apenas nome e telefone.
 - [ ] Exibir sucesso, erro, horario indisponivel e solicitacao duplicada.
 - [ ] Validar o fluxo em telas pequenas e em conexoes lentas.

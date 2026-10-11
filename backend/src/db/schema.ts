@@ -90,7 +90,11 @@ export const customers = pgTable(
         createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     },
     (table) => [
-        uniqueIndex('uk_customers_tenant_phone').on(table.tenantId, table.phone),
+        // Sem unique(tenant_id, phone): um mesmo telefone pode pertencer a vários
+        // clientes (nomes diferentes). Index não-único para acelerar buscas por
+        // telefone na futura lista de contatos. A deduplicação (DISTINCT ON) será
+        // feita na camada de consulta.
+        index('idx_customers_tenant_phone').on(table.tenantId, table.phone),
     ]
 );
 

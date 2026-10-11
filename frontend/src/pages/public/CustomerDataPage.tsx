@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency, formatDateBR } from '@/utils/format';
+import { DEFAULT_TZ, zonedToUtcIso } from '@/utils/timezone';
 import { createPublicAppointment } from '@/services/appointments';
 
 export const CustomerDataPage: React.FC = () => {
@@ -55,11 +56,10 @@ export const CustomerDataPage: React.FC = () => {
       setSubmitting(true);
       setErrorField(null);
 
-      // Monta o horário local em Date e converte para ISO (UTC).
-      const [y, m, d] = date.split('-').map(Number);
-      const [hh, mm] = time.split(':').map(Number);
-      const local = new Date(y, m - 1, d, hh, mm, 0, 0);
-      const startTimeIso = local.toISOString();
+      // O horário escolhido é o relógio local do estabelecimento: convertemos
+      // para o instante UTC correspondente usando o fuso do tenant, sem depender
+      // do fuso do navegador (o agendamento é armazenado em UTC).
+      const startTimeIso = zonedToUtcIso(date, time, tenant.timezone || DEFAULT_TZ);
 
       await createPublicAppointment(slug, {
         serviceId: service!.id,
