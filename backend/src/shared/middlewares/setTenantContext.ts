@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError.js';
 
-export async function setTenantContext(
+export function setTenantContext(
     request: Request,
     _response: Response,
     next: NextFunction
