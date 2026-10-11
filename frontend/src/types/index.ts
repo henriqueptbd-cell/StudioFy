@@ -7,6 +7,7 @@ export interface TenantPublicData {
     logoUrl?: string | null;
     primaryColor?: string | null;
     phone?: string | null;
+    timezone?: string | null;
 }
 
 export interface Service {
