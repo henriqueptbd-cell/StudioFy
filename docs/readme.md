@@ -12,3 +12,4 @@ Esta pasta centraliza os documentos de produto, decisões de arquitetura e guias
 - 🧪 **[TESTING.md](./TESTING.md):** Estratégia, comandos e cobertura atual dos testes.
 - 🌐 **[API_SPECIFICATION.md](./API_SPECIFICATION.md):** Catálogo de rotas, contratos, papéis e respostas da API.
 - 🗺️ **[ROADMAP.md](./ROADMAP.md):** Ordem de implementação, critérios de validação e backlog pós-MVP.
+- 🧾 **[WORKLOG.md](./WORKLOG.md):** Registro cronológico de pedidos, decisões e mudanças (memória do projeto entre sessões).
