@@ -90,13 +90,16 @@ No backend (`--prefix backend`): `test`, `typecheck`, `lint`, `db:generate`,
 | Banco de dados / RLS             | `.agents/database.md`     |
 | Testes                           | `.agents/testing.md`      |
 | Documentação                     | `.agents/docs.md`         |
+| Auditoria cruzada                | `.agents/auditor.md`      |
 
 ### Orquestração no OpenClaw
 
 Em sessões do OpenClaw, o agente principal (`main`) assume o papel de
 **orquestrador** descrito em `.agents/orchestrator.md`: planeja a fatia, delega por
 área (usando subagentes/ferramentas nativas do OpenClaw no lugar das skills do Cline),
-integra, valida e registra no `docs/WORKLOG.md`. A precedência documentada em
+integra, valida e registra no `docs/WORKLOG.md`. O trabalho usa **múltiplos agentes em
+paralelo** quando as tarefas são independentes e exige **auditoria cruzada** por um
+agente diferente do implementador (`.agents/auditor.md`). A precedência documentada em
 `.agents/README.md` continua valendo; o que muda é apenas o executor.
 
 ## 7. Limites de autonomia
