@@ -89,7 +89,7 @@ A autenticação se aplica a administradores e profissionais.
 - A senha nunca deve aparecer em respostas, logs, seeds versionados ou mensagens de erro.
 - O login deve responder com erro genérico para credencial inválida.
 - O JWT deve conter apenas claims necessários, como `sub`, `tenant_id`, `role`, `iat` e `exp`.
-- Tokens devem ter expiração curta e não devem ser aceitos após a conta ser desativada.
+- Tokens devem ter expiração curta e não devem ser aceitos após a conta ser desativada; as rotas administrativas verificam o status atual do usuário via middleware `ensureActiveUser`.
 - `JWT_SECRET` deve ser fornecido por variável de ambiente e nunca ser versionado.
 - A estratégia de armazenamento do token no frontend deve evitar exposição a XSS; se cookies forem usados, devem ser `HttpOnly`, `Secure` e `SameSite` apropriados.
 - Recuperação de senha, refresh token e MFA ficam fora do MVP até serem especificados.

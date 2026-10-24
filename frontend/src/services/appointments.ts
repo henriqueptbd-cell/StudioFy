@@ -11,6 +11,7 @@ export async function listAdminAppointments(params: {
     startDate?: string;
     endDate?: string;
     status?: AppointmentStatus;
+    professionalId?: string;
 }): Promise<AdminAppointment[]> {
     const res = await api.get('/admin/appointments', { params });
     return res.data.data;

@@ -3,6 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, X, CalendarCheck2, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { listAdminAppointments, updateAppointmentStatus } from '@/services/appointments';
+import { fetchTeamMembers } from '@/services/team';
+import { fetchTenantSettings } from '@/services/tenantSettings';
+import { DEFAULT_TZ, endOfZonedDayIso, zonedToUtcIso } from '@/utils/timezone';
 import { AppointmentStatus, AdminAppointment } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
@@ -25,15 +28,47 @@ const TRANSITIONS: Partial<Record<AppointmentStatus, AllowedAction[]>> = {
 export const AppointmentsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<AppointmentStatus | 'ALL'>('ALL');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [professionalId, setProfessionalId] = useState('');
+
+  const { data: settings } = useQuery({
+    queryKey: ['admin-settings'],
+    queryFn: fetchTenantSettings,
+  });
+  const timeZone = settings?.tenant.timezone ?? DEFAULT_TZ;
+
+  const { data: team = [] } = useQuery({
+    queryKey: ['admin-team'],
+    queryFn: fetchTeamMembers,
+  });
+  const professionals = team.filter((member) => member.active);
+
+  const queryParams = {
+    ...(filter !== 'ALL' ? { status: filter } : {}),
+    ...(professionalId ? { professionalId } : {}),
+    ...(startDate ? { startDate: zonedToUtcIso(startDate, '00:00', timeZone) } : {}),
+    ...(endDate ? { endDate: endOfZonedDayIso(endDate, timeZone) } : {}),
+  };
 
   const {
     data: appointments = [],
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['admin-appointments', filter],
-    queryFn: () => listAdminAppointments(filter === 'ALL' ? {} : { status: filter }),
+    queryKey: ['admin-appointments', queryParams],
+    queryFn: () => listAdminAppointments(queryParams),
   });
+
+  const hasFilters =
+    filter !== 'ALL' || Boolean(startDate) || Boolean(endDate) || Boolean(professionalId);
+
+  const clearFilters = () => {
+    setFilter('ALL');
+    setStartDate('');
+    setEndDate('');
+    setProfessionalId('');
+  };
 
   const mutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
@@ -72,6 +107,51 @@ export const AppointmentsPage: React.FC = () => {
             {f.label}
           </button>
         ))}
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500">
+          De
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500">
+          Até
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500">
+          Profissional
+          <select
+            value={professionalId}
+            onChange={(e) => setProfessionalId(e.target.value)}
+            className="min-w-44 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-zinc-400"
+          >
+            <option value="">Todos</option>
+            {professionals.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-xl px-3 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -125,6 +205,11 @@ const AppointmentCard: React.FC<{
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-zinc-50 px-3 py-2 text-xs">
         <span className="font-medium text-zinc-700">{appointment.service.name}</span>
         <span className="text-zinc-400">{appointment.service.durationMinutes} min</span>
+        {appointment.professional ? (
+          <span className="text-zinc-400">Profissional: {appointment.professional.name}</span>
+        ) : (
+          <span className="text-zinc-300">Sem profissional atribuído</span>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">

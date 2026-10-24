@@ -144,16 +144,16 @@ module.exports = {
 | **6. Login** | `/admin/login`  | Formulário de E-mail/Senha para Admin e Profissionais. |
 
 |
-| **7. Dashboard** | `/admin/dashboard` | Resumo de agendamentos do dia, próximos horários e atalhos rápidos.
+| **7. Dashboard** | `/admin/dashboard` | Atalhos rápidos e cartões de resumo (integração com a API pendente).
 
 |
-| **8. Gestão de Agenda** | `/admin/agendamentos` | Lista filtrável por data e status (`PENDENTE`, `CONFIRMADO`, `CONCLUIDO`, `CANCELADO`) com botão utilitário `wa.me`.
+| **8. Gestão de Agenda** | `/admin/agendamentos` | Lista filtrável por status (`PENDENTE`, `CONFIRMADO`, `CONCLUIDO`, `CANCELADO`) com botão utilitário `wa.me`. Filtros por data e profissional pendentes.
 
 |
-| **9. Gestão de Serviços** | `/admin/servicos` | CRUD de serviços (nome, duração, preço) e chave liga/desliga (Ativo/Inativo).
+| **9. Gestão de Serviços** | `/admin/servicos` | Cadastro e listagem de serviços (nome, duração, preço). Edição e chave Ativo/Inativo pendentes.
 
 |
-| **10. Gestão de Equipe** | `/admin/equipe` | Cadastro e convites via WhatsApp para novos profissionais.
+| **10. Gestão de Equipe** | `/admin/equipe` | Cadastro, edição, ativação e desativação de administradores e profissionais. Convites via WhatsApp ficam no backlog.
 
 |
 | **11. Configurações em Abas** | `/admin/configuracoes` | Painel tabulado para ajuste geral da loja:

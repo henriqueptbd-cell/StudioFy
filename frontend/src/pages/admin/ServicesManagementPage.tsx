@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, ClipboardList, Timer } from 'lucide-react';
+import { Plus, ClipboardList, Timer, Pencil, Power, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { createSessionService, fetchAdminServices } from '@/services/tenantServices';
+import { createSessionService, fetchAdminServices, updateSessionService } from '@/services/tenantServices';
+import { AdminService } from '@/types';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency } from '@/utils/format';
@@ -26,6 +27,7 @@ export const ServicesManagementPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FormState>(initial);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const canCreate = user?.role === 'ADMIN';
@@ -47,21 +49,60 @@ export const ServicesManagementPage: React.FC = () => {
       toast.error('Preencha nome, duração e um preço válido.');
       return;
     }
+    const description = form.description.trim();
     try {
       setSaving(true);
-      await createSessionService({
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        durationMinutes: duration,
-        price,
-      });
-      toast.success('Serviço cadastrado com sucesso!');
+      if (editingId) {
+        await updateSessionService(editingId, {
+          name: form.name.trim(),
+          description: description || null,
+          durationMinutes: duration,
+          price,
+        });
+        toast.success('Serviço atualizado com sucesso!');
+      } else {
+        await createSessionService({
+          name: form.name.trim(),
+          description: description || undefined,
+          durationMinutes: duration,
+          price,
+        });
+        toast.success('Serviço cadastrado com sucesso!');
+      }
       setForm(initial);
+      setEditingId(null);
       await queryClient.invalidateQueries({ queryKey: ['admin-services'] });
     } catch {
-      toast.error('Não foi possível cadastrar o serviço.');
+      toast.error(
+        editingId ? 'Não foi possível atualizar o serviço.' : 'Não foi possível cadastrar o serviço.',
+      );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const startEdit = (service: AdminService) => {
+    setEditingId(service.id);
+    setForm({
+      name: service.name,
+      description: service.description ?? '',
+      durationMinutes: String(service.durationMinutes),
+      price: service.price,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(initial);
+  };
+
+  const toggleActive = async (service: AdminService) => {
+    try {
+      await updateSessionService(service.id, { active: !service.active });
+      toast.success(service.active ? 'Serviço desativado.' : 'Serviço ativado.');
+      await queryClient.invalidateQueries({ queryKey: ['admin-services'] });
+    } catch {
+      toast.error('Não foi possível alterar o status do serviço.');
     }
   };
 
@@ -122,10 +163,16 @@ export const ServicesManagementPage: React.FC = () => {
           />
         </div>
 
-        <div className="mt-5 flex items-center justify-end">
+        <div className="mt-5 flex items-center justify-end gap-2">
+          {editingId && (
+            <Button type="button" variant="outline" onClick={cancelEdit} disabled={saving}>
+              <X className="size-4" />
+              Cancelar
+            </Button>
+          )}
           <Button type="submit" disabled={!canCreate || saving}>
-            <Plus className="size-4" />
-            {saving ? 'Salvando...' : 'Cadastrar serviço'}
+            {editingId ? <Pencil className="size-4" /> : <Plus className="size-4" />}
+            {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar serviço'}
           </Button>
         </div>
       </form>
@@ -167,15 +214,37 @@ export const ServicesManagementPage: React.FC = () => {
                       <p className="mt-1 text-xs text-zinc-500">{service.description}</p>
                     ) : null}
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                      service.active
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-zinc-100 text-zinc-500'
-                    }`}
-                  >
-                    {service.active ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                        service.active
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-zinc-100 text-zinc-500'
+                      }`}
+                    >
+                      {service.active ? 'Ativo' : 'Inativo'}
+                    </span>
+                    {canCreate && (
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(service)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-100"
+                        >
+                          <Pencil className="size-3" /> Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void toggleActive(service)}
+                          className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold hover:bg-zinc-100 ${
+                            service.active ? 'text-rose-600' : 'text-emerald-600'
+                          }`}
+                        >
+                          <Power className="size-3" /> {service.active ? 'Desativar' : 'Ativar'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-zinc-400">
                   <Timer className="size-3.5" />

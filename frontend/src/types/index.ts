@@ -50,6 +50,31 @@ export interface LoginResponse {
     user: AuthUser;
 }
 
+// ===== Equipe (membros do tenant) =====
+
+export interface TeamMember {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    active: boolean;
+    createdAt: string;
+}
+
+export interface CreateTeamMemberPayload {
+    name: string;
+    email: string;
+    password: string;
+    role: Role;
+}
+
+export interface UpdateTeamMemberPayload {
+    name?: string;
+    role?: Role;
+    active?: boolean;
+    password?: string;
+}
+
 /** Payload usado no cadastro de um novo estabelecimento (provision).
  *  Cria um tenant + usuário ADMIN juntos no backend. */
 export interface ProvisionTenantPayload {
@@ -98,6 +123,11 @@ export interface AppointmentService {
     price: string;
 }
 
+export interface AppointmentProfessional {
+    id: string;
+    name: string;
+}
+
 export interface AdminAppointment {
     id: string;
     status: AppointmentStatus;
@@ -106,6 +136,7 @@ export interface AdminAppointment {
     expiresAt?: string | null;
     customer: AppointmentUser;
     service: AppointmentService;
+    professional?: AppointmentProfessional | null;
     whatsappLink?: string;
 }
 
@@ -114,6 +145,14 @@ export type CreateServicePayload = {
     description?: string;
     durationMinutes: number;
     price: number;
+};
+
+export type UpdateServicePayload = {
+    name?: string;
+    description?: string | null;
+    durationMinutes?: number;
+    price?: number;
+    active?: boolean;
 };
 
 // ===== Configurações do estabelecimento =====

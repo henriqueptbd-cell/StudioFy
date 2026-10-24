@@ -52,3 +52,16 @@ export function zonedToUtcIso(dateStr: string, timeStr: string, timeZone: string
 
     return refined.toISOString();
 }
+
+/**
+ * Instante ISO imediatamente anterior à meia-noite seguinte à data informada,
+ * no fuso do estabelecimento. Útil para filtros "até o fim do dia".
+ */
+export function endOfZonedDayIso(dateStr: string, timeZone: string): string {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1));
+    const nextDateStr = next.toISOString().slice(0, 10);
+    return new Date(
+        new Date(zonedToUtcIso(nextDateStr, '00:00', timeZone)).getTime() - 1,
+    ).toISOString();
+}

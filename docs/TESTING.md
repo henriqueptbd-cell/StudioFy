@@ -49,7 +49,7 @@ Ele cobre o fluxo integrado da Fase 3:
 - rejeicao de rota protegida sem token;
 - acesso de rota protegida com token valido.
 
-A suite atual foi executada com sucesso: **4 arquivos de teste e 25 testes aprovados**.
+A suite atual foi executada com sucesso: **6 arquivos de teste e 41 testes aprovados**.
 
 ## O que este teste garante
 
@@ -105,6 +105,18 @@ fluxo de criacao e transicao inicial do agendamento:
 - rejeicao de solicitacao duplicada no mesmo slot;
 - confirmacao administrativa para `CONFIRMADO`;
 - rejeicao de transicao invalida para `RECUSADO`.
+
+### Gestao de equipe (Fase 6)
+
+O teste `backend/src/modules/team/team.spec.ts` cobre:
+
+- cadastro de profissional com senha hasheada e sem expor `passwordHash`;
+- rejeicao de e-mail duplicado no mesmo tenant;
+- listagem com isolamento entre tenants;
+- bloqueio de cadastro por `PROFESSIONAL` (403);
+- atualizacao de nome, papel, status e senha;
+- bloqueio de auto-desativacao e auto-rebaixamento;
+- bloqueio de login e de tokens de usuarios desativados.
 
 ### Fuso horario do tenant
 

@@ -1,14 +1,18 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { and, eq, gte, lte } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { withTenant } from '../../../../db/client.js';
-import { appointments, customers, services } from '../../../../db/schema.js';
+import { appointments, customers, services, users } from '../../../../db/schema.js';
+
+const professionals = alias(users, 'professionals');
 import { AppError } from '../../../../shared/errors/AppError.js';
 
 const listQuerySchema = z.object({
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     status: z.enum(['PENDENTE', 'CONFIRMADO', 'RECUSADO', 'CONCLUIDO', 'CANCELADO']).optional(),
+    professionalId: z.string().uuid('Profissional inválido').optional(),
 });
 
 export class ListAppointmentsController {
@@ -19,7 +23,7 @@ export class ListAppointmentsController {
             throw new AppError('Contexto de tenant ausente', 400, 'MISSING_TENANT');
         }
 
-        const { startDate, endDate, status } = listQuerySchema.parse(request.query);
+        const { startDate, endDate, status, professionalId } = listQuerySchema.parse(request.query);
 
         const conditions = [eq(appointments.tenantId, tenantId)];
 
@@ -33,6 +37,10 @@ export class ListAppointmentsController {
 
         if (status) {
             conditions.push(eq(appointments.status, status));
+        }
+
+        if (professionalId) {
+            conditions.push(eq(appointments.professionalId, professionalId));
         }
 
         const list = await withTenant(tenantId, (tx) =>
@@ -54,10 +62,15 @@ export class ListAppointmentsController {
                         durationMinutes: services.durationMinutes,
                         price: services.price,
                     },
+                    professional: {
+                        id: professionals.id,
+                        name: professionals.name,
+                    },
                 })
                 .from(appointments)
                 .innerJoin(customers, eq(appointments.customerId, customers.id))
                 .innerJoin(services, eq(appointments.serviceId, services.id))
+                .leftJoin(professionals, eq(appointments.professionalId, professionals.id))
                 .where(and(...conditions)),
         );
 

@@ -25,10 +25,11 @@ src/
 ├── config/          # Variáveis de ambiente e secrets
 ├── modules/         # Módulos encapsulados por contexto
 │   ├── appointments/ # Casos de uso e regras de agendamento
-│   ├── customers/   # Cadastro/Consulta simples de clientes
+│   ├── auth/        # Login e emissão de JWT
 │   ├── services/    # Gestão dos serviços oferecidos
-│   ├── tenants/     # Dados e configurações do estabelecimento
-│   └── users/       # Autenticação e gestão da equipe
+│   ├── settings/    # Perfil e horários do estabelecimento
+│   ├── team/        # Membros da equipe (admin/profissional)
+│   └── tenants/     # Dados e provisionamento do estabelecimento
 ├── shared/          # Middlewares globais, manipuladores de erro e conexões
 └── server.ts        # Ponto de entrada da API
 

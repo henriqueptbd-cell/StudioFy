@@ -1,5 +1,5 @@
 import { api } from '@/services/api';
-import { AdminService, CreateServicePayload, Service } from '@/types';
+import { AdminService, CreateServicePayload, Service, UpdateServicePayload } from '@/types';
 
 /** Cadastra um novo serviço (requer token de ADMIN). */
 export async function createSessionService(payload: CreateServicePayload): Promise<Service> {
@@ -11,6 +11,14 @@ export async function createSessionService(payload: CreateServicePayload): Promi
 export async function fetchAdminServices(): Promise<AdminService[]> {
     const res = await api.get('/admin/services');
     return res.data.data;
+}
+
+export async function updateSessionService(
+  id: string,
+  payload: UpdateServicePayload,
+): Promise<Service> {
+  const res = await api.patch(`/admin/services/${id}`, payload);
+  return res.data.data;
 }
 
 export async function fetchPublicServices(slug: string): Promise<Service[]> {

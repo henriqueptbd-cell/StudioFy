@@ -109,6 +109,9 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** entregar uma fatia funcional de ponta a ponta antes de ampliar o painel.
 
+> **Status:** concluida. A criacao atomica e garantida pela transacao da aplicacao e
+> pelo trigger de conflito com advisory lock; coberta por teste de concorrencia.
+
 ### 4.1. API publica
 
 - [x] Buscar dados publicos do tenant pelo slug.
@@ -116,7 +119,7 @@ Testes, endurecimento e deploy
 - [x] Consultar horarios disponiveis para uma data e um servico.
 - [x] Validar nome, telefone, servico, data, horario, limite de antecedencia e janela maxima de 30 dias.
 - [x] Criar solicitacao publica com status inicial `PENDENTE`.
-- [ ] Fazer a criacao de forma atomica, rejeitando conflitos mesmo sob concorrencia.
+- [x] Fazer a criacao de forma atomica, rejeitando conflitos mesmo sob concorrencia (transacao + trigger com advisory lock; coberto por teste de concorrencia).
 - [x] Bloquear sobreposicoes com agendamentos `PENDENTE` ou `CONFIRMADO`, considerando a duracao real do servico.
 - [x] Criar rotina para expirar solicitacoes `PENDENTE` em 12 horas ou 1 hora antes do atendimento, o que ocorrer primeiro.
 
@@ -146,36 +149,47 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** permitir que o cliente complete o fluxo sem criar conta.
 
-- [ ] Inicializar Vite, React, TypeScript, Tailwind, TanStack Query e React Router.
-- [ ] Configurar tema do tenant por CSS Variables.
-- [ ] Exibir estabelecimento e servicos ativos.
-- [ ] Permitir selecionar data e horario realmente disponivel.
+> **Status:** implementada no frontend; falta validacao E2E e em dispositivos moveis.
+
+- [x] Inicializar Vite, React, TypeScript, Tailwind, TanStack Query e React Router.
+- [x] Configurar tema do tenant por CSS Variables.
+- [x] Exibir estabelecimento e servicos ativos.
+- [x] Permitir selecionar data e horario realmente disponivel.
 - [x] Converter horario local do tenant para UTC antes do envio e formatar respostas UTC no horario local do tenant.
-- [ ] Solicitar apenas nome e telefone.
-- [ ] Exibir sucesso, erro, horario indisponivel e solicitacao duplicada.
-- [ ] Validar o fluxo em telas pequenas e em conexoes lentas.
+- [x] Solicitar apenas nome e telefone.
+- [x] Exibir sucesso, erro, horario indisponivel e solicitacao duplicada.
+- [ ] Validar o fluxo em telas pequenas e em conexoes lentas (pendente de teste E2E/mobile).
 
 ## FASE 6: Painel administrativo
 
 > **Objetivo:** dar ao estabelecimento as ferramentas necessarias para operar a agenda.
 
-- [ ] Criar login e protecao das rotas privadas.
-- [ ] Exibir agenda com filtros por data, status e profissional.
-- [ ] Implementar confirmar, recusar, cancelar e concluir.
-- [ ] Gerar link `wa.me` com mensagem de confirmacao.
-- [ ] Criar CRUD de servicos, incluindo ativar e desativar.
-- [ ] Criar gestao de profissionais, incluindo ativar e desativar.
-- [ ] Criar configuracao do tenant e horarios de funcionamento.
+> **Status:** parcial. Login, agenda, transicoes, WhatsApp, configuracoes e gestao de
+> equipe estao implementados; falta a consulta de clientes vinculados ao tenant.
+
+- [x] Criar login e protecao das rotas privadas.
+- [x] Exibir agenda com filtro por status.
+- [x] Adicionar filtros por data e por profissional na agenda.
+- [x] Implementar confirmar, recusar, cancelar e concluir.
+- [x] Gerar link `wa.me` com mensagem de confirmacao.
+- [x] Criar e listar servicos.
+- [x] Editar servicos e ativar/desativar.
+- [x] Criar gestao de profissionais, incluindo ativar e desativar (API `/admin/team` + tela de equipe; coberto por testes).
+- [x] Criar configuracao do tenant e horarios de funcionamento.
 - [ ] Criar consulta de clientes vinculados ao tenant, sem expor dados de outros tenants.
 
 ## FASE 7: Testes e endurecimento
 
 > **Objetivo:** validar comportamento, seguranca e operacao antes do deploy.
 
-- [ ] Testar regras de dominio e todas as transicoes de status.
-- [ ] Testar endpoints com sucesso, validacao, autorizacao e erro.
-- [ ] Testar dois pedidos concorrentes para o mesmo horario.
-- [ ] Testar RLS e isolamento em consultas, atualizacoes e exclusoes.
+> **Status:** parcial. A suite atual tem 30 testes aprovados e cobre RLS, concorrencia,
+> criacao/confirmacao/recusa de agendamento, timezone e autenticacao. Faltam E2E,
+> mobile, expiracao via endpoint e revisao de operacao.
+
+- [ ] Testar regras de dominio e todas as transicoes de status (parcial: faltam cancelamento, conclusao e expiracao).
+- [ ] Testar endpoints com sucesso, validacao, autorizacao e erro (parcial).
+- [x] Testar dois pedidos concorrentes para o mesmo horario.
+- [x] Testar RLS e isolamento em consultas, atualizacoes e exclusoes.
 - [ ] Testar o fluxo principal com um teste E2E.
 - [ ] Validar responsividade em dispositivos mobile reais ou emuladores.
 - [ ] Revisar logs, mensagens de erro, CORS, rate limiting e segredos.
@@ -196,6 +210,7 @@ Testes, endurecimento e deploy
 ## Backlog pos-MVP
 
 ##### 📩 Convite de Profissionais via WhatsApp
+
 - [ ] **Modelagem:** Criar a tabela `invitations` (`tenant_id`, `email`, `name`, `phone`, `token`, `status`, `expires_at`).
 - [ ] **Backend (API):**
   - [ ] Implementar `POST /api/v1/admin/invitations` (Auth ADMIN, validações Zod, geração de token UUID/JWT e montagem de link wa.me).
@@ -206,13 +221,9 @@ Testes, endurecimento e deploy
   - [ ] Página pública `/accept-invite?token=...` para definição de senha.
   - [ ] Tratamento de token inválido/expirado.
 
-
-
 - [ ] Notificacoes automaticas via API oficial do WhatsApp.
 - [ ] Pagamentos online de sinal ou reserva.
 - [ ] Escolha de profissional pelo cliente.
 - [ ] Disponibilidade individual por profissional.
 - [ ] Reagendamento pelo cliente.
 - [ ] Historico detalhado e relatorios financeiros.
-
-

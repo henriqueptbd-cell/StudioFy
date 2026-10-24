@@ -13,7 +13,7 @@ As rotas são separadas por contexto no backend:
 
 - `backend/src/routes/auth.routes.ts`: login e provisionamento inicial.
 - `backend/src/routes/public.routes.ts`: tenant, serviços, slots e solicitações públicas.
-- `backend/src/routes/admin.routes.ts`: agenda, serviços, transições de status e expiração.
+- `backend/src/routes/admin.routes.ts`: agenda, serviços, equipe, configurações, transições de status e expiração.
 - `backend/src/routes/index.ts`: apenas compõe os routers.
 
 Essa separação evita concentrar autenticação, rotas públicas e operações
@@ -24,8 +24,8 @@ administrativas no mesmo arquivo. Os caminhos HTTP continuam sob `/api/v1`.
 - Rotas públicas usam `publicRateLimiter`.
 - Rotas administrativas exigem `Authorization: Bearer <JWT_TOKEN>`.
 - O JWT informa `tenantId` e `role`; o backend estabelece o contexto RLS antes das operações no banco.
-- `ADMIN` pode gerenciar serviços e alterar status de agendamentos.
-- `PROFESSIONAL` pode consultar a agenda; ações administrativas devem respeitar a autorização da rota.
+- `ADMIN` pode gerenciar serviços, equipe e alterar status de agendamentos.
+- `PROFESSIONAL` pode consultar a agenda e a equipe (somente leitura); ações administrativas devem respeitar a autorização da rota.
 - Erros seguem `{ success: false, error: { code, message } }`.
 
 ---
@@ -37,6 +37,29 @@ administrativas no mesmo arquivo. Os caminhos HTTP continuam sob `/api/v1`.
 Cria um tenant e seu primeiro administrador. Retorna um JWT inicial.
 
 - **Acesso:** Público, com rate limiting.
+- **Request Body:**
+
+```json
+{
+  "tenant": {
+    "name": "Studio Beleza",
+    "slug": "studio-beleza",
+    "phone": "11999999999"
+  },
+  "admin": {
+    "name": "Maria Silva",
+    "email": "admin@studiobeleza.com",
+    "password": "senha_segura"
+  }
+}
+```
+
+O `slug` deve ser único e usar apenas letras minúsculas, números e hífen. O admin
+criado recebe a role `ADMIN`; profissionais e outros admins são cadastrados depois
+por ele em `POST /api/v1/admin/team`.
+
+O telefone do estabelecimento é enviado apenas com dígitos (DDD + número); o link
+do WhatsApp adiciona o prefixo `55` quando necessário.
 
 ### 1.2 `POST /api/v1/auth/login`
 
@@ -93,7 +116,7 @@ Retorna as informações públicas e identidade visual do estabelecimento.
     "slug": "studio-beleza",
     "logoUrl": "https://...",
     "primaryColor": "#FF5733",
-    "phone": "5511999999999"
+    "phone": "11999999999"
   }
 }
 ```
@@ -151,7 +174,7 @@ Cria uma nova solicitação de agendamento.
   "startTime": "2026-09-10T14:00:00Z",
   "customer": {
     "name": "Ana Souza",
-    "phone": "5511988887777"
+    "phone": "11988887777"
   }
 }
 ```
@@ -179,9 +202,12 @@ Requer cabeçalho HTTP: `Authorization: Bearer <JWT_TOKEN>`.
 
 ### 3.1 `GET /api/v1/admin/appointments`
 
-Lista a agenda do estabelecimento com suporte a filtros de data e status.
+Lista a agenda do estabelecimento com suporte a filtros de data, status e profissional.
 
-- **Query Params:** `startDate`, `endDate`, `status`
+- **Query Params:** `startDate`, `endDate`, `status`, `professionalId`
+- **Observação:** `startDate`/`endDate` são instantes ISO (UTC). O frontend converte o dia
+  escolhido no fuso do tenant para UTC antes de enviar. `professionalId` é o `id` de um
+  membro da equipe; quando ausente, retorna todos.
 - **Response (200 OK):**
 
 ```json
@@ -195,13 +221,17 @@ Lista a agenda do estabelecimento com suporte a filtros de data e status.
       "endTime": "2026-09-10T14:45:00Z",
       "customer": {
         "name": "Ana Souza",
-        "phone": "5511988887777"
+        "phone": "11988887777"
       },
       "service": {
         "name": "Corte de Cabelo Feminino",
         "durationMinutes": 45
       },
-      "whatsappLink": "[https://wa.me/5511988887777?text=](https://wa.me/5511988887777?text=)..."
+      "professional": {
+        "id": "uuid-v4",
+        "name": "Ana Souza"
+      },
+      "whatsappLink": "https://wa.me/5511988887777?text=..."
     }
   ]
 }
@@ -247,6 +277,28 @@ Cadastra um novo serviço no estabelecimento.
 }
 ```
 
+### 3.3.1 `PATCH /api/v1/admin/services/:id`
+
+Atualiza um serviço existente. Todos os campos são opcionais, mas é preciso enviar ao
+menos um. Usado para editar dados e para ativar/desativar o serviço.
+
+- **Acesso:** `ADMIN`.
+- **Request Body (todos opcionais):**
+
+```json
+{
+  "name": "Corte + Barba",
+  "description": "Com acabamento na navalha",
+  "durationMinutes": 60,
+  "price": 80.0,
+  "active": false
+}
+```
+
+- **Response (200 OK):** dados do serviço atualizado (`id`, `name`, `description`,
+  `durationMinutes`, `price`, `active`).
+- **Erros:** `SERVICE_NOT_FOUND` (404), `VALIDATION_ERROR` (400).
+
 ### 3.4 `GET /api/v1/admin/dashboard`
 
 Rota protegida usada para validar autenticação, autorização de administrador e
@@ -267,6 +319,70 @@ Executa manualmente a rotina que cancela solicitações `PENDENTE` expiradas.
   "data": { "expiredCount": 1 }
 }
 ```
+
+### 3.6 `GET /api/v1/admin/team`
+
+Lista os membros da equipe do tenant autenticado. Nunca retorna `passwordHash`.
+
+- **Acesso:** `ADMIN` e `PROFESSIONAL` (somente leitura).
+- **Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-v4",
+      "name": "Ana Souza",
+      "email": "ana@studio.com",
+      "role": "PROFESSIONAL",
+      "active": true,
+      "createdAt": "2026-10-18T12:00:00Z"
+    }
+  ]
+}
+```
+
+### 3.7 `POST /api/v1/admin/team`
+
+Cadastra um membro da equipe com senha inicial.
+
+- **Acesso:** `ADMIN`.
+- **Request Body:**
+
+```json
+{
+  "name": "Ana Souza",
+  "email": "ana@studio.com",
+  "password": "senha_inicial",
+  "role": "PROFESSIONAL"
+}
+```
+
+- **Response (201 Created):** dados públicos do membro (`id`, `name`, `email`, `role`, `active`, `createdAt`).
+- **Erros:** `EMAIL_ALREADY_EXISTS` (409), `VALIDATION_ERROR` (400).
+
+### 3.8 `PATCH /api/v1/admin/team/:id`
+
+Atualiza nome, papel, status ou senha de um membro.
+
+- **Acesso:** `ADMIN`.
+- **Request Body (todos os campos opcionais):**
+
+```json
+{
+  "name": "Ana Souza",
+  "role": "ADMIN",
+  "active": true,
+  "password": "nova_senha"
+}
+```
+
+- **Regras:**
+  - o administrador não pode desativar nem rebaixar a si mesmo;
+  - o tenant precisa manter pelo menos um administrador ativo;
+  - a senha, quando enviada, é armazenada apenas como hash.
+- **Erros:** `CANNOT_DEACTIVATE_SELF`, `CANNOT_DEMOTE_SELF`, `LAST_ADMIN_REQUIRED`, `TEAM_MEMBER_NOT_FOUND` (404), `VALIDATION_ERROR` (400).
 
 ---
 
