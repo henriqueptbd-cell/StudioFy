@@ -10,6 +10,7 @@ camadas complementares:
 | Regras do Cline | `.clinerules/*.md`         | Regras carregadas automaticamente; as condicionais usam `paths:` no frontmatter.                         |
 | Skills do Cline | `.cline/skills/*/SKILL.md` | Especialistas acionáveis sob demanda (via `/nome` ou match da descrição).                                |
 | Memória         | `docs/WORKLOG.md`          | Registro append-only de pedidos, decisões e mudanças; lido no início e atualizado no fim de toda tarefa. |
+| Orquestração    | agente `main` (OpenClaw)   | Em sessões do OpenClaw, o agente principal assume o papel de `.agents/orchestrator.md` e usa subagentes/ferramentas nativas no lugar das skills do Cline. |
 
 ## Como usar
 
