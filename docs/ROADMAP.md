@@ -165,7 +165,7 @@ Testes, endurecimento e deploy
 > **Objetivo:** dar ao estabelecimento as ferramentas necessarias para operar a agenda.
 
 > **Status:** parcial. Login, agenda, transicoes, WhatsApp, configuracoes e gestao de
-> equipe estao implementados; falta a consulta de clientes vinculados ao tenant.
+> equipe estao implementados; a fase esta completa.
 
 - [x] Criar login e protecao das rotas privadas.
 - [x] Exibir agenda com filtro por status.
@@ -176,7 +176,7 @@ Testes, endurecimento e deploy
 - [x] Editar servicos e ativar/desativar.
 - [x] Criar gestao de profissionais, incluindo ativar e desativar (API `/admin/team` + tela de equipe; coberto por testes).
 - [x] Criar configuracao do tenant e horarios de funcionamento.
-- [ ] Criar consulta de clientes vinculados ao tenant, sem expor dados de outros tenants.
+- [x] Criar consulta de clientes vinculados ao tenant, sem expor dados de outros tenants.
 
 ## FASE 7: Testes e endurecimento
 

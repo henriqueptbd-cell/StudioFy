@@ -123,6 +123,14 @@ export interface AppointmentService {
     price: string;
 }
 
+/** Cliente vinculado ao tenant (contato da agenda). */
+export interface AdminCustomer {
+    id: string;
+    name: string;
+    phone: string;
+    createdAt: string;
+}
+
 export interface AppointmentProfessional {
     id: string;
     name: string;

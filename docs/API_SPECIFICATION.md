@@ -384,6 +384,30 @@ Atualiza nome, papel, status ou senha de um membro.
   - a senha, quando enviada, é armazenada apenas como hash.
 - **Erros:** `CANNOT_DEACTIVATE_SELF`, `CANNOT_DEMOTE_SELF`, `LAST_ADMIN_REQUIRED`, `TEAM_MEMBER_NOT_FOUND` (404), `VALIDATION_ERROR` (400).
 
+### 3.10 `GET /api/v1/admin/customers`
+
+Lista os clientes vinculados ao tenant autenticado, deduplicados por telefone.
+
+- **Acesso:** `ADMIN` e `PROFESSIONAL` (somente leitura).
+- **Query Params:** `search` (opcional; casa por nome ou por telefone).
+- **Regra de deduplicação:** quando o mesmo telefone possui mais de um registro de
+  cliente, retorna o registro mais recente.
+- **Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-v4",
+      "name": "Ana Souza",
+      "phone": "11988887777",
+      "createdAt": "2026-10-18T12:00:00Z"
+    }
+  ]
+}
+```
+
 ---
 
 ## 🔴 4. Respostas de Erro Padronizadas

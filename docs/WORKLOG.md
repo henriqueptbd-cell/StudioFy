@@ -34,6 +34,17 @@
 
 ---
 
+## 2026-10-24 — Fase 6: consulta de clientes do tenant
+
+- **Status:** Concluído
+- **Pedido:** Concluir a Fase 6 com a consulta de clientes vinculados ao tenant.
+- **Contexto:** Último item pendente da Fase 6; a consulta precisa listar contatos sem vazar dados de outros tenants.
+- **Decisão:** `GET /admin/customers` (ADMIN/PROFESSIONAL) com deduplicação por telefone via `selectDistinctOn` e busca opcional por nome/telefone; tela "Clientes" no painel com TanStack Query.
+- **Mudanças:** `backend/src/modules/customers/useCases/listCustomers/ListCustomersController.ts` (novo); `backend/src/modules/customers/useCases/listCustomers/listCustomers.spec.ts` (novo); `backend/src/routes/admin.routes.ts`; `frontend/src/services/customers.ts` (novo); `frontend/src/pages/admin/CustomersPage.tsx` (novo); `frontend/src/types/index.ts`; `frontend/src/App.tsx`; `frontend/src/layouts/AdminLayout.tsx`; `docs/API_SPECIFICATION.md`; `docs/ROADMAP.md`; `docs/WORKLOG.md`.
+- **Validação:** `npm run typecheck` (backend + frontend): ok; `npm run lint`: 0 erros (2 warnings pré-existentes); `npm run build --prefix frontend`: ok; `npm run test --prefix backend -- src/modules/customers/useCases/listCustomers/listCustomers.spec.ts`: 6/6 passando.
+- **Auditoria:** bloqueada por infraestrutura — `sessions_spawn` rejeita todos os modelos deepseek com `Unknown model` (falta entrada em `models.providers["deepseek"].models[]`). Revisão feita pelo orquestrador + validação automatizada (typecheck, lint, build e 6/6 testes).
+- **Pendências:** habilitar um modelo utilizável por subagentes e executar a auditoria cruzada. Config do Gateway: a tentativa de habilitar subagentes removeu o binding `agentRuntime` de `deepseek/deepseek-v4-pro`; revalidar em nova conversa.
+
 ## 2026-10-24 — Fase 6: filtros da agenda e edição de serviços
 
 - **Status:** Concluído

@@ -22,6 +22,7 @@ import { DashboardPage } from '@/pages/admin/DashboardPage';
 import { AppointmentsPage } from '@/pages/admin/AppointmentsPage';
 import { ServicesManagementPage } from '@/pages/admin/ServicesManagementPage';
 import { TeamManagementPage } from '@/pages/admin/TeamManagementPage';
+import { CustomersPage } from '@/pages/admin/CustomersPage';
 import { SettingsTabbedPage } from '@/pages/admin/SettingsTabbedPage';
 
 const queryClient = new QueryClient({
@@ -83,6 +84,7 @@ export const App: React.FC = () => {
             <Route path="agendamentos" element={<AppointmentsPage />} />
             <Route path="servicos" element={<ServicesManagementPage />} />
             <Route path="equipe" element={<TeamManagementPage />} />
+            <Route path="clientes" element={<CustomersPage />} />
             <Route path="configuracoes" element={<SettingsTabbedPage />} />
           </Route>
 

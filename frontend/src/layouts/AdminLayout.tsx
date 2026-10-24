@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
-import { LayoutDashboard, CalendarDays, Scissors, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Scissors, Users, Contact, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/utils/cn';
 import { BrandMark } from '@/components/ui/BrandMark';
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/admin/agendamentos', label: 'Agendamentos', icon: CalendarDays },
   { to: '/admin/servicos', label: 'Serviços', icon: Scissors },
   { to: '/admin/equipe', label: 'Equipe', icon: Users },
+  { to: '/admin/clientes', label: 'Clientes', icon: Contact },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ];
 

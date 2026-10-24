@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { CreateServiceController } from '../modules/services/useCases/createService/CreateServiceController.js';
 import { ListServicesController } from '../modules/services/useCases/listServices/ListServicesController.js';
+import { ListCustomersController } from '../modules/customers/useCases/listCustomers/ListCustomersController.js';
 import { UpdateServiceController } from '../modules/services/useCases/updateService/UpdateServiceController.js';
 import { UpdateAppointmentStatusController } from '../modules/appointments/useCases/UpdateAppointmentStatusController.js';
 import { ListAppointmentsController } from '../modules/appointments/useCases/listAppointments/ListAppointmentsController.js';
@@ -20,6 +21,7 @@ const adminRoutes = Router();
 const createServiceController = new CreateServiceController();
 const listServicesController = new ListServicesController();
 const updateServiceController = new UpdateServiceController();
+const listCustomersController = new ListCustomersController();
 const updateAppointmentStatusController = new UpdateAppointmentStatusController();
 const listAppointmentsController = new ListAppointmentsController();
 const getSettingsController = new GetSettingsController();
@@ -48,6 +50,10 @@ adminRoutes.post('/api/v1/admin/services', authorizeRole(['ADMIN']), (req, res, 
 
 adminRoutes.patch('/api/v1/admin/services/:id', authorizeRole(['ADMIN']), (req, res, next) => {
     updateServiceController.handle(req, res).catch(next);
+});
+
+adminRoutes.get('/api/v1/admin/customers', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {
+    listCustomersController.handle(req, res).catch(next);
 });
 
 adminRoutes.get('/api/v1/admin/settings', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {
