@@ -197,3 +197,19 @@ export interface CreateAppointmentPayload {
         phone: string;
     };
 }
+
+export interface PublicSlotsResponse {
+    date: string;
+    availableSlots: string[];
+}
+
+interface AssistedAppointmentBasePayload {
+    serviceId: string;
+    startTime: string;
+    professionalId?: string;
+}
+
+export type CreateAssistedAppointmentPayload = AssistedAppointmentBasePayload & (
+    | { customerId: string; customer?: never }
+    | { customer: { name: string; phone: string }; customerId?: never }
+);

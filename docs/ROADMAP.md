@@ -165,7 +165,7 @@ Testes, endurecimento e deploy
 > **Objetivo:** dar ao estabelecimento as ferramentas necessarias para operar a agenda.
 
 > **Status:** concluida. Login, agenda, transicoes, WhatsApp, configuracoes, gestao de
-> equipe e consulta de clientes estao implementados; todos os itens desta fase estao completos.
+> equipe, consulta de clientes e agendamento assistido estao implementados.
 
 - [x] Criar login e protecao das rotas privadas.
 - [x] Exibir agenda com filtro por status.
@@ -177,13 +177,14 @@ Testes, endurecimento e deploy
 - [x] Criar gestao de profissionais, incluindo ativar e desativar (API `/admin/team` + tela de equipe; coberto por testes).
 - [x] Criar configuracao do tenant e horarios de funcionamento.
 - [x] Criar consulta de clientes vinculados ao tenant, sem expor dados de outros tenants.
+- [x] Permitir que ADMIN/PROFESSIONAL selecione cliente existente ou cadastre rapidamente um cliente e crie um agendamento assistido ja `CONFIRMADO`.
 
 ## FASE 7: Testes e endurecimento
 
 > **Objetivo:** validar comportamento, seguranca e operacao antes do deploy.
 
-> **Status:** parcial. A suite Vitest tem 54 testes em 8 arquivos e cobre as permissões ADMIN/PROFESSIONAL
-> e as transições válidas de status; o Playwright cobre o pedido público à confirmação administrativa.
+> **Status:** parcial. A suite Vitest tem 65 testes em 9 arquivos e cobre as permissões ADMIN/PROFESSIONAL,
+> agendamento assistido, conflitos concorrentes e as transições de status; o Playwright cobre o pedido público, confirmação e fluxo assistido.
 > Ainda faltam expiração via endpoint, mobile e revisão de operação.
 
 - [x] Testar transições válidas de status para ADMIN/PROFESSIONAL e rejeitar transições inválidas.
@@ -191,7 +192,7 @@ Testes, endurecimento e deploy
 - [ ] Testar endpoints com sucesso, validacao, autorizacao e erro (parcial).
 - [x] Testar dois pedidos concorrentes para o mesmo horario.
 - [x] Testar RLS e isolamento em consultas, atualizacoes e exclusoes.
-- [x] Testar o fluxo principal E2E: cliente solicita e administrador confirma o agendamento.
+- [x] Testar o fluxo principal E2E: cliente solicita, administrador confirma e agenda para cliente existente pelo painel.
 - [ ] Validar responsividade em dispositivos mobile reais ou emuladores.
 - [ ] Revisar logs, mensagens de erro, CORS, rate limiting e segredos.
 - [ ] Revisar acessibilidade basica, estados de carregamento e estados vazios.

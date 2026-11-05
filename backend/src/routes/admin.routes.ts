@@ -4,6 +4,7 @@ import { ListServicesController } from '../modules/services/useCases/listService
 import { ListCustomersController } from '../modules/customers/useCases/listCustomers/ListCustomersController.js';
 import { UpdateServiceController } from '../modules/services/useCases/updateService/UpdateServiceController.js';
 import { UpdateAppointmentStatusController } from '../modules/appointments/useCases/UpdateAppointmentStatusController.js';
+import { CreateAssistedAppointmentController } from '../modules/appointments/useCases/CreateAssistedAppointmentController.js';
 import { ListAppointmentsController } from '../modules/appointments/useCases/listAppointments/ListAppointmentsController.js';
 import { expirePendingAppointments } from '../modules/appointments/jobs/ExpireAppointmentsJob.js';
 import { GetSettingsController } from '../modules/settings/useCases/getSettings/GetSettingsController.js';
@@ -23,6 +24,7 @@ const listServicesController = new ListServicesController();
 const updateServiceController = new UpdateServiceController();
 const listCustomersController = new ListCustomersController();
 const updateAppointmentStatusController = new UpdateAppointmentStatusController();
+const createAssistedAppointmentController = new CreateAssistedAppointmentController();
 const listAppointmentsController = new ListAppointmentsController();
 const getSettingsController = new GetSettingsController();
 const updateProfileController = new UpdateProfileController();
@@ -82,6 +84,10 @@ adminRoutes.patch('/api/v1/admin/team/:id', authorizeRole(['ADMIN']), (req, res,
 
 adminRoutes.patch('/api/v1/admin/appointments/:id/status', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {
     updateAppointmentStatusController.handle(req, res).catch(next);
+});
+
+adminRoutes.post('/api/v1/admin/appointments', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {
+    createAssistedAppointmentController.handle(req, res).catch(next);
 });
 
 adminRoutes.get('/api/v1/admin/appointments', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {

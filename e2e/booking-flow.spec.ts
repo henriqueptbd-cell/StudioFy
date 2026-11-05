@@ -33,6 +33,18 @@ function assertIsolatedTestDatabase(): void {
   }
 }
 
+function tenantDate(daysAhead: number): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  const date = new Date(Date.UTC(value('year'), value('month') - 1, value('day') + daysAhead));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
 async function expectStatus(
   response: Awaited<ReturnType<APIRequestContext['post']>>,
   expectedStatus: number,
@@ -123,7 +135,9 @@ test.afterAll(async () => {
   await api?.dispose();
 });
 
-test('cliente solicita um horário e o estabelecimento confirma no painel', async ({ page }) => {
+test('cliente solicita e equipe confirma; painel também agenda para cliente existente', async ({
+  page,
+}) => {
   const runId = randomUUID().slice(0, 8);
   const customerName = `Cliente E2E ${runId}`;
 
@@ -167,4 +181,31 @@ test('cliente solicita um horário e o estabelecimento confirma no painel', asyn
     .getByText(customerName, { exact: true })
     .locator('xpath=../../../..');
   await expect(persistedAppointment.getByText('CONFIRMADO', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Novo agendamento' }).click();
+  const assistedDialog = page.getByRole('dialog', { name: 'Novo agendamento' });
+  await expect(assistedDialog).toBeVisible();
+  await assistedDialog
+    .getByRole('textbox', { name: 'Buscar por nome ou telefone' })
+    .fill(customerName);
+  const existingCustomer = assistedDialog.getByRole('button', { name: new RegExp(customerName) });
+  await expect(existingCustomer).toBeVisible();
+  await existingCustomer.click();
+  await assistedDialog.getByLabel('Serviço ativo').selectOption({
+    label: `${fixture.serviceName} · 30 min`,
+  });
+  await assistedDialog.getByLabel('Data do atendimento').fill(tenantDate(1));
+  const assistedSlot = assistedDialog.getByRole('button', { name: /^\d{2}:\d{2}$/ }).first();
+  await expect(assistedSlot).toBeVisible();
+  await assistedSlot.click();
+  await assistedDialog.getByRole('button', { name: 'Confirmar agendamento' }).click();
+  await expect(assistedDialog).toBeHidden();
+  await expect(page.getByText('Agendamento criado e confirmado.', { exact: true })).toBeVisible();
+
+  await expect(page.getByText(customerName, { exact: true })).toHaveCount(2);
+  const assistedAppointmentCard = page
+    .getByText(customerName, { exact: true })
+    .last()
+    .locator('xpath=../../../..');
+  await expect(assistedAppointmentCard.getByText('CONFIRMADO', { exact: true })).toBeVisible();
 });

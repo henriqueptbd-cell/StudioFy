@@ -49,9 +49,9 @@ npm run test --prefix backend -- src/modules/auth/useCases/login/loginAndProvisi
 
 ## Suíte atual
 
-A suíte validada contém **8 arquivos Vitest e 54 testes aprovados**, além de **1 cenário E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento, conversão de fuso horário, concorrência e isolamento RLS entre tenants. A integração de agendamentos verifica que `PROFESSIONAL` pode consultar recursos permitidos e executar transições válidas, mas recebe 403 ao tentar alterar serviços, equipe ou configurações. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
+**A suíte validada contém 9 arquivos Vitest e 65 testes aprovados**, além de **1 cenário E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento público e assistido, conversão de fuso horário, concorrência e isolamento RLS entre tenants. A integração verifica que `PROFESSIONAL` pode consultar recursos permitidos e executar transições válidas, mas recebe 403 ao tentar alterar serviços, equipe ou configurações. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
 
-O cenário `e2e/booking-flow.spec.ts` valida, pelo navegador, solicitação pública, status `PENDENTE`, login administrativo, confirmação e persistência como `CONFIRMADO` após recarregar a agenda. Seu setup provisiona tenant/credenciais aleatórios e configura serviço/expediente por API. Os outros estados da interface, viewport mobile e smoke test em produção continuam no roadmap.
+O cenário `e2e/booking-flow.spec.ts` valida, pelo navegador, solicitação pública, status `PENDENTE`, login administrativo, confirmação e persistência após recarregar a agenda; em seguida, seleciona o mesmo cliente existente no modal assistido e cria um segundo agendamento já `CONFIRMADO`. Seu setup provisiona tenant/credenciais aleatórios e configura serviço/expediente por API. Os outros estados da interface, viewport mobile e smoke test em produção continuam no roadmap.
 
 ## Proximos testes
 
@@ -83,8 +83,9 @@ Os testes abaixo ja foram executados com sucesso na role restrita da aplicacao:
 - [x] Listar a agenda autenticada com dados do cliente e link `wa.me`.
 - [x] Cancelar agendamento e liberar o slot para nova reserva.
 - [x] Concluir atendimento: `CONFIRMADO` -> `CONCLUIDO`.
+- [x] Criar agendamento assistido como `CONFIRMADO`, associando cliente existente ou cadastro rápido, com autorização e validações de slot.
 - [x] Revisar conversao completa de timezone IANA no calculo de slots.
-- [x] Rejeitar duplicidade e sobreposicao com `PENDENTE` ou `CONFIRMADO`.
+- [x] Rejeitar duplicidade e sobreposicao com `PENDENTE` ou `CONFIRMADO`, retornando `409 SLOT_UNAVAILABLE` também em corrida concorrente.
 - [ ] Testar expiração de `PENDENTE` pelo endpoint administrativo.
 - [ ] Validar todas as transicoes de status.
 

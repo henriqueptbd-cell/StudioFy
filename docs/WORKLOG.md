@@ -5,6 +5,16 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-05 — Cadastro rápido e agendamento assistido
+
+- **Status:** Em andamento
+- **Pedido:** Implementar diretamente na main o cadastro rápido de cliente e agendamento assistido por ADMIN/PROFESSIONAL, criando o horário como `CONFIRMADO`.
+- **Contexto:** O sistema lista clientes e recebe agendamentos públicos, mas não permite à equipe registrar um agendamento feito por telefone/presencialmente.
+- **Decisão:** Adicionar criação autenticada usando cliente existente ou dados de cliente novo, slot disponível do tenant, serviço ativo, validação de conflitos e status `CONFIRMADO`; profissionais são associados a si e admins podem escolher a profissional. Sem mudança de schema.
+- **Mudanças:** Planejadas em backend, frontend, testes, `docs/API_SPECIFICATION.md`, `docs/ROADMAP.md`, `docs/TESTING.md`, `docs/visao_do_produto.md` e este worklog.
+- **Validação:** Pendente.
+- **Pendências:** Implementar, auditar, validar e publicar o commit diretamente em `main`, sem PR, conforme solicitado.
+
 ## 2026-11-05 — Autorizar profissionais a atualizar status da agenda
 
 - **Status:** Concluído

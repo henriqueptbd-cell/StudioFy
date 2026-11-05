@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, X, CalendarCheck2, MessageCircle } from 'lucide-react';
+import { Check, X, CalendarCheck2, CalendarPlus, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { listAdminAppointments, updateAppointmentStatus } from '@/services/appointments';
 import { fetchTeamMembers } from '@/services/team';
@@ -9,6 +9,7 @@ import { DEFAULT_TZ, endOfZonedDayIso, zonedToUtcIso } from '@/utils/timezone';
 import { AppointmentStatus, AdminAppointment } from '@/types';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
+import { AssistedAppointmentDialog } from '@/components/admin/AssistedAppointmentDialog';
 
 const STATUS_FILTERS: Array<{ value: AppointmentStatus | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Todos' },
@@ -31,6 +32,7 @@ export const AppointmentsPage: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [professionalId, setProfessionalId] = useState('');
+  const [showAssistedDialog, setShowAssistedDialog] = useState(false);
 
   const { data: settings } = useQuery({
     queryKey: ['admin-settings'],
@@ -84,13 +86,21 @@ export const AppointmentsPage: React.FC = () => {
 
   return (
     <div>
-      <header className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Agenda</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950">Agendamentos</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Acompanhe as solicitações e gerencie o status de cada horário.
-        </p>
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Agenda</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950">Agendamentos</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Acompanhe as solicitações e gerencie o status de cada horário.
+          </p>
+        </div>
+        <Button onClick={() => setShowAssistedDialog(true)} className="w-full sm:w-auto">
+          <CalendarPlus className="size-4" />
+          Novo agendamento
+        </Button>
       </header>
+
+      {showAssistedDialog && <AssistedAppointmentDialog onClose={() => setShowAssistedDialog(false)} />}
 
       <div className="mb-5 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((f) => (

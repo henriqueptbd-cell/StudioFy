@@ -195,6 +195,9 @@ Cria uma nova solicitação de agendamento.
 }
 ```
 
+- **Erro de conflito (409):** `SLOT_UNAVAILABLE` se outra requisição ocupar o horário
+  após a checagem de disponibilidade e antes da gravação.
+
 ---
 
 ## 🟠 3. Rotas Administrativas (`/api/v1/admin`)
@@ -237,6 +240,39 @@ Lista a agenda do estabelecimento com suporte a filtros de data, status e profis
   ]
 }
 ```
+
+### `POST /api/v1/admin/appointments` — agendamento assistido
+
+Cria um agendamento registrado pela equipe, já confirmado, para um cliente que entrou
+em contato por telefone ou presencialmente.
+
+- **Acesso:** `ADMIN` e `PROFESSIONAL`.
+- **Request Body:** `serviceId` UUID, `startTime` em ISO/UTC, `professionalId` opcional,
+  e exatamente um entre `customerId` (cliente existente do tenant) ou `customer`
+  (`name` + `phone`, para cadastro rápido no mesmo fluxo).
+- **Atribuição:** um `PROFESSIONAL` é associado a si mesmo; não pode atribuir outro
+  profissional. `ADMIN` pode atribuir um membro `PROFESSIONAL` ativo do próprio tenant
+  ou deixar o agendamento sem atribuição.
+- **Regras:** serviço ativo, cliente/profissional do tenant autenticado, antecedência
+  mínima de 2 horas, máximo de 30 dias, expediente local do tenant e ausência de
+  sobreposição com solicitações `PENDENTE` ou agendamentos `CONFIRMADO`. Conflitos são
+  verificados novamente na gravação; se outra requisição ocupar o slot no mesmo
+  instante, a proteção transacional do banco retorna `SLOT_UNAVAILABLE`.
+- **Response (201 Created):** agendamento com `status: "CONFIRMADO"` e
+  `expiresAt: null`.
+- **Erro de conflito (409):** `SLOT_UNAVAILABLE`.
+
+```json
+{
+  "serviceId": "uuid-v4",
+  "startTime": "2026-09-10T14:00:00Z",
+  "customerId": "uuid-v4",
+  "professionalId": "uuid-v4"
+}
+```
+
+Para um cliente novo, envie `customer: { "name": "Ana Souza", "phone": "11988887777" }`
+no lugar de `customerId`. Dados do cliente e agendamento são gravados na mesma operação.
 
 ### 3.2 `PATCH /api/v1/admin/appointments/:id/status`
 

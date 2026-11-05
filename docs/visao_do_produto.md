@@ -159,6 +159,8 @@ Poderá, conforme suas permissões:
 - visualizar informações necessárias das clientes;
 - utilizar o WhatsApp para comunicação;
 - visualizar os horários gerais de atendimento do estabelecimento.
+- registrar rapidamente uma cliente e criar, em seu nome, um agendamento no horário
+  disponível; o agendamento assistido já fica confirmado e é associado à profissional.
 
 ### 5.3 Administrador
 
@@ -178,6 +180,8 @@ Poderá:
 - configurar identidade visual;
 - acompanhar os agendamentos;
 - visualizar clientes vinculados ao estabelecimento.
+- criar agendamentos em nome de clientes, selecionando um cliente existente ou
+  cadastrando-o rapidamente; pode atribuir uma profissional ativa do estabelecimento.
 
 O administrador poderá ser, por exemplo, a proprietária do salão.
 
@@ -214,6 +218,16 @@ CONFIRMADO
     ↓
 Comunicação via WhatsApp
 ```
+
+### Agendamento assistido pela equipe
+
+ADMIN e PROFESSIONAL também podem registrar um agendamento em nome de uma cliente que
+prefere contato direto com o estabelecimento. A equipe seleciona um cadastro existente
+para preservar o vínculo do histórico ou informa nome e telefone para cadastro rápido;
+serviço e horário são escolhidos no fluxo interno. O novo agendamento nasce
+`CONFIRMADO`, respeita o expediente e não pode sobrepor outro horário pendente ou
+confirmado. Um profissional que cria o agendamento fica associado a ele; o administrador
+pode selecionar uma profissional ativa ou deixar a atribuição em aberto.
 
 ### Status previstos
 
