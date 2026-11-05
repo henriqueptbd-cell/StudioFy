@@ -80,7 +80,7 @@ adminRoutes.patch('/api/v1/admin/team/:id', authorizeRole(['ADMIN']), (req, res,
     updateTeamMemberController.handle(req, res).catch(next);
 });
 
-adminRoutes.patch('/api/v1/admin/appointments/:id/status', authorizeRole(['ADMIN']), (req, res, next) => {
+adminRoutes.patch('/api/v1/admin/appointments/:id/status', authorizeRole(['ADMIN', 'PROFESSIONAL']), (req, res, next) => {
     updateAppointmentStatusController.handle(req, res).catch(next);
 });
 

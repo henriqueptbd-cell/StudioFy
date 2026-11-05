@@ -155,6 +155,7 @@ Poderá, conforme suas permissões:
 - confirmar agendamentos;
 - recusar agendamentos;
 - cancelar agendamentos;
+- concluir atendimentos;
 - visualizar informações necessárias das clientes;
 - utilizar o WhatsApp para comunicação;
 - visualizar os horários gerais de atendimento do estabelecimento.

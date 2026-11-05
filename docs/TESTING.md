@@ -49,7 +49,7 @@ npm run test --prefix backend -- src/modules/auth/useCases/login/loginAndProvisi
 
 ## Suíte atual
 
-A suíte validada contém **8 arquivos Vitest e 52 testes aprovados**, além de **1 cenário E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento, conversão de fuso horário, concorrência e isolamento RLS entre tenants. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
+A suíte validada contém **8 arquivos Vitest e 54 testes aprovados**, além de **1 cenário E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento, conversão de fuso horário, concorrência e isolamento RLS entre tenants. A integração de agendamentos verifica que `PROFESSIONAL` pode consultar recursos permitidos e executar transições válidas, mas recebe 403 ao tentar alterar serviços, equipe ou configurações. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
 
 O cenário `e2e/booking-flow.spec.ts` valida, pelo navegador, solicitação pública, status `PENDENTE`, login administrativo, confirmação e persistência como `CONFIRMADO` após recarregar a agenda. Seu setup provisiona tenant/credenciais aleatórios e configura serviço/expediente por API. Os outros estados da interface, viewport mobile e smoke test em produção continuam no roadmap.
 

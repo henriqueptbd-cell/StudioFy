@@ -24,8 +24,9 @@ administrativas no mesmo arquivo. Os caminhos HTTP continuam sob `/api/v1`.
 - Rotas públicas usam `publicRateLimiter`.
 - Rotas administrativas exigem `Authorization: Bearer <JWT_TOKEN>`.
 - O JWT informa `tenantId` e `role`; o backend estabelece o contexto RLS antes das operações no banco.
-- `ADMIN` pode gerenciar serviços, equipe e alterar status de agendamentos.
-- `PROFESSIONAL` pode consultar a agenda e a equipe (somente leitura); ações administrativas devem respeitar a autorização da rota.
+- `ADMIN` pode gerenciar serviços, equipe e configurações, além de operar a agenda.
+- `ADMIN` e `PROFESSIONAL` podem consultar a agenda e alterar status de agendamentos, sempre respeitando a máquina de estados e o tenant autenticado.
+- `PROFESSIONAL` tem acesso de leitura a serviços, clientes, equipe e configurações; alterações de serviços, equipe e configurações são exclusivas de `ADMIN`.
 - Erros seguem `{ success: false, error: { code, message } }`.
 
 ---
@@ -240,6 +241,9 @@ Lista a agenda do estabelecimento com suporte a filtros de data, status e profis
 ### 3.2 `PATCH /api/v1/admin/appointments/:id/status`
 
 Altera o status de um agendamento (Confirmar, Recusar, Cancelar, Concluir).
+
+- **Acesso:** `ADMIN` e `PROFESSIONAL`.
+- **Regra:** somente transições válidas da máquina de estados do agendamento são aceitas; ambas as roles operam apenas na agenda do próprio tenant.
 
 - **Request Body:**
 

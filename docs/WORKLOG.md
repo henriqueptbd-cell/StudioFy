@@ -5,6 +5,16 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-05 — Autorizar profissionais a atualizar status da agenda
+
+- **Status:** Concluído
+- **Pedido:** Resolver a divergência entre a promessa de permissões dos profissionais e a autorização da API.
+- **Contexto:** Visão do produto e segurança permitem que PROFESSIONAL opere solicitações; a rota de status hoje aceita somente ADMIN e a especificação diz que o profissional é somente leitura.
+- **Decisão:** Permitir ADMIN e PROFESSIONAL apenas na rota de transição de status; o controller continua validando tenant e máquina de estados. Escritas de serviços, equipe e configurações permanecem exclusivas do ADMIN. Forma de entrega: commit direto em `main`, sem PR, conforme solicitado.
+- **Mudanças:** `backend/src/routes/admin.routes.ts`; `backend/src/modules/appointments/useCases/phase4Step3.spec.ts`; `docs/API_SPECIFICATION.md`; `docs/visao_do_produto.md`; `docs/TESTING.md`; `docs/ROADMAP.md`; `docs/WORKLOG.md`.
+- **Validação:** Teste de integração de agendamentos 11/11; `npm test` 8 arquivos/54 testes; `npm run test:e2e` typecheck + 1 cenário; `npm run lint` sem erros (2 warnings preexistentes); `npm run build` aprovado (warning preexistente de chunk Vite acima de 500 kB); Prettier e `git diff --check` aprovados.
+- **Pendências:** Nenhuma para a autorização de status; testar a rotina/endpoint de expiração continua no roadmap.
+
 ## Regras
 
 1. **Toda tarefa gera uma entrada**, inclusive correções pequenas, refactors e docs.

@@ -182,11 +182,12 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** validar comportamento, seguranca e operacao antes do deploy.
 
-> **Status:** parcial. A suite Vitest tem 52 testes em 8 arquivos; o Playwright cobre um E2E
-> do pedido público à confirmação administrativa. Ainda faltam mobile, expiração via endpoint,
-> cobertura completa das transições e revisão de operação.
+> **Status:** parcial. A suite Vitest tem 54 testes em 8 arquivos e cobre as permissões ADMIN/PROFESSIONAL
+> e as transições válidas de status; o Playwright cobre o pedido público à confirmação administrativa.
+> Ainda faltam expiração via endpoint, mobile e revisão de operação.
 
-- [ ] Testar regras de dominio e todas as transicoes de status (parcial: faltam cancelamento, conclusao e expiracao).
+- [x] Testar transições válidas de status para ADMIN/PROFESSIONAL e rejeitar transições inválidas.
+- [ ] Testar a rotina/endpoint de expiração automática de solicitações pendentes.
 - [ ] Testar endpoints com sucesso, validacao, autorizacao e erro (parcial).
 - [x] Testar dois pedidos concorrentes para o mesmo horario.
 - [x] Testar RLS e isolamento em consultas, atualizacoes e exclusoes.

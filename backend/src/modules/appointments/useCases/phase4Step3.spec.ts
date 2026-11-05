@@ -17,6 +17,8 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
     let tenantId = '';
     let serviceId = '';
     let adminToken = '';
+    let professionalToken = '';
+    let professionalId = '';
     let appointmentId = '';
     let replacementAppointmentId = '';
     let targetStartTime = '';
@@ -37,6 +39,20 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
                 throw new Error('Admin não foi criado');
             }
             adminToken = AuthProvider.generateToken({ sub: admin.id, tenantId, role: 'ADMIN' });
+
+            const [professional] = await tx.insert(users).values({
+                tenantId,
+                name: 'Profissional Flow',
+                email: `professional-${Date.now()}@flow.com`,
+                passwordHash,
+                role: 'PROFESSIONAL',
+                active: true,
+            }).returning();
+            if (!professional) {
+                throw new Error('Profissional não foi criado');
+            }
+            professionalId = professional.id;
+            professionalToken = AuthProvider.generateToken({ sub: professional.id, tenantId, role: 'PROFESSIONAL' });
 
             const [service] = await tx.insert(services).values({ tenantId, name: 'Corte Premium', durationMinutes: 30, price: '60.00', active: true }).returning();
             if (!service) {
@@ -118,10 +134,43 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
         expect(response.body.data.status).toBe('CONFIRMADO');
     });
 
-    it('4. [ADMIN] Deve rejeitar transição inválida CONFIRMADO -> RECUSADO (400 Bad Request)', async () => {
+    it('3.1 [PROFESSIONAL] Deve consultar recursos permitidos, mas não administrar serviços, equipe ou configurações', async () => {
+        const readResponses = await Promise.all([
+            request(app).get('/api/v1/admin/appointments').set('Authorization', `Bearer ${professionalToken}`),
+            request(app).get('/api/v1/admin/services').set('Authorization', `Bearer ${professionalToken}`),
+            request(app).get('/api/v1/admin/customers').set('Authorization', `Bearer ${professionalToken}`),
+            request(app).get('/api/v1/admin/team').set('Authorization', `Bearer ${professionalToken}`),
+            request(app).get('/api/v1/admin/settings').set('Authorization', `Bearer ${professionalToken}`),
+        ]);
+        expect(readResponses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200]);
+
+        const adminOnlyResponses = await Promise.all([
+            request(app).post('/api/v1/admin/services')
+                .set('Authorization', `Bearer ${professionalToken}`)
+                .send({ name: 'Serviço não autorizado', durationMinutes: 30, price: 10 }),
+            request(app).patch(`/api/v1/admin/services/${serviceId}`)
+                .set('Authorization', `Bearer ${professionalToken}`)
+                .send({ active: false }),
+            request(app).post('/api/v1/admin/team')
+                .set('Authorization', `Bearer ${professionalToken}`)
+                .send({ name: 'Não autorizado', email: 'denied@flow.com', password: 'senha_segura_123', role: 'PROFESSIONAL' }),
+            request(app).patch(`/api/v1/admin/team/${professionalId}`)
+                .set('Authorization', `Bearer ${professionalToken}`)
+                .send({ active: false }),
+            request(app).put('/api/v1/admin/settings/profile')
+                .set('Authorization', `Bearer ${professionalToken}`)
+                .send({}),
+            request(app).put('/api/v1/admin/settings/schedule')
+                .set('Authorization', `Bearer ${professionalToken}`)
+                .send({ days: [] }),
+        ]);
+        expect(adminOnlyResponses.map((response) => response.status)).toEqual([403, 403, 403, 403, 403, 403]);
+    });
+
+    it('4. [PROFESSIONAL] Deve rejeitar transição inválida CONFIRMADO -> RECUSADO (400 Bad Request)', async () => {
         const response = await request(app)
             .patch(`/api/v1/admin/appointments/${appointmentId}/status`)
-            .set('Authorization', `Bearer ${adminToken}`)
+            .set('Authorization', `Bearer ${professionalToken}`)
             .send({ status: 'RECUSADO' });
 
         expect(response.status).toBe(400);
@@ -146,10 +195,10 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
         );
     });
 
-    it('6. [ADMIN] Deve cancelar atendimento CONFIRMADO -> CANCELADO (200 OK)', async () => {
+    it('6. [PROFESSIONAL] Deve cancelar atendimento CONFIRMADO -> CANCELADO (200 OK)', async () => {
         const response = await request(app)
             .patch(`/api/v1/admin/appointments/${appointmentId}/status`)
-            .set('Authorization', `Bearer ${adminToken}`)
+            .set('Authorization', `Bearer ${professionalToken}`)
             .send({ status: 'CANCELADO' });
 
         expect(response.status).toBe(200);
@@ -172,21 +221,55 @@ describe('Suite de Testes de Integração - FASE 4 (Passo 3 - Fluxo de Agendamen
         replacementAppointmentId = response.body.data.id;
     });
 
-    it('8. [ADMIN] Deve concluir atendimento CONFIRMADO -> CONCLUIDO (200 OK)', async () => {
+    it('8. [PROFESSIONAL] Deve confirmar e concluir atendimento (200 OK)', async () => {
         const confirmResponse = await request(app)
             .patch(`/api/v1/admin/appointments/${replacementAppointmentId}/status`)
-            .set('Authorization', `Bearer ${adminToken}`)
+            .set('Authorization', `Bearer ${professionalToken}`)
             .send({ status: 'CONFIRMADO' });
 
         expect(confirmResponse.status).toBe(200);
 
         const response = await request(app)
             .patch(`/api/v1/admin/appointments/${replacementAppointmentId}/status`)
-            .set('Authorization', `Bearer ${adminToken}`)
+            .set('Authorization', `Bearer ${professionalToken}`)
             .send({ status: 'CONCLUIDO' });
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
         expect(response.body.data.status).toBe('CONCLUIDO');
+    });
+
+    it('9. [PROFESSIONAL] Deve recusar e cancelar solicitações PENDENTE (200 OK)', async () => {
+        const createPendingAppointment = async (name: string, phone: string): Promise<string> => {
+            const response = await request(app)
+                .post(`/api/v1/public/tenants/${tenantSlug}/appointments`)
+                .send({ serviceId, startTime: targetStartTime, customer: { name, phone } });
+
+            expect(response.status).toBe(201);
+            return String(response.body.data.id);
+        };
+
+        const rejectedId = await createPendingAppointment('Cliente Recusado', '11966664444');
+        const rejection = await request(app)
+            .patch(`/api/v1/admin/appointments/${rejectedId}/status`)
+            .set('Authorization', `Bearer ${professionalToken}`)
+            .send({ status: 'RECUSADO' });
+        expect(rejection.status).toBe(200);
+        expect(rejection.body.data.status).toBe('RECUSADO');
+
+        const invalidTerminalTransition = await request(app)
+            .patch(`/api/v1/admin/appointments/${rejectedId}/status`)
+            .set('Authorization', `Bearer ${professionalToken}`)
+            .send({ status: 'CANCELADO' });
+        expect(invalidTerminalTransition.status).toBe(400);
+        expect(invalidTerminalTransition.body.error.code).toBe('INVALID_STATUS_TRANSITION');
+
+        const pendingId = await createPendingAppointment('Cliente Cancelado', '11966663333');
+        const cancellation = await request(app)
+            .patch(`/api/v1/admin/appointments/${pendingId}/status`)
+            .set('Authorization', `Bearer ${professionalToken}`)
+            .send({ status: 'CANCELADO' });
+        expect(cancellation.status).toBe(200);
+        expect(cancellation.body.data.status).toBe('CANCELADO');
     });
 });
