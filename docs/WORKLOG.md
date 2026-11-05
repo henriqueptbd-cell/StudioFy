@@ -5,6 +5,17 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-05 — Conclusão: cadastro rápido e agendamento assistido
+
+- **Status:** Concluído
+- **Pedido:** Implementar diretamente na main o cadastro rápido de cliente e agendamento assistido por ADMIN/PROFESSIONAL, criando o horário como `CONFIRMADO`.
+- **Contexto:** A equipe precisava registrar clientes atendidos por telefone ou presencialmente sem perder o histórico nem ocupar o slot manualmente fora do sistema.
+- **Decisão:** Reutilizar cliente existente ou criar cliente novo na mesma operação; profissionais são associados a si mesmos e admins podem escolher profissional ativo do tenant. O banco continua protegendo conflitos sob concorrência; a exceção exata do trigger é mapeada para `409 SLOT_UNAVAILABLE`. Sem alteração de schema.
+- **Mudanças:** Endpoint e testes de backend; modal mobile-first e integração na agenda; E2E de cliente existente; contrato, roadmap, testes, CI, visão do produto e instruções atualizados.
+- **Validação:** `npm test`: 9 arquivos/65 testes e typechecks aprovados; `npm run test:e2e`: typecheck e 1 cenário aprovados; `npm run lint`: 0 erros e 2 avisos Fast Refresh em `AuthContext.tsx` e `BookingContext.tsx` não alterados; builds de backend e frontend de produção aprovados; Prettier dos novos arquivos/docs/E2E e `git diff --check` aprovados.
+- **Publicação:** Commit `0d1e222` publicado diretamente em `main`, sem PR. GitHub Actions CI da implementação concluiu com sucesso (run `42007407817`).
+- **Pendências:** Nenhuma para esta entrega; expiração automática, validação mobile e revisão operacional continuam no roadmap.
+
 ## 2026-11-05 — Cadastro rápido e agendamento assistido
 
 - **Status:** Em andamento
