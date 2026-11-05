@@ -164,8 +164,8 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** dar ao estabelecimento as ferramentas necessarias para operar a agenda.
 
-> **Status:** parcial. Login, agenda, transicoes, WhatsApp, configuracoes e gestao de
-> equipe estao implementados; a fase esta completa.
+> **Status:** concluida. Login, agenda, transicoes, WhatsApp, configuracoes, gestao de
+> equipe e consulta de clientes estao implementados; todos os itens desta fase estao completos.
 
 - [x] Criar login e protecao das rotas privadas.
 - [x] Exibir agenda com filtro por status.
@@ -182,7 +182,7 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** validar comportamento, seguranca e operacao antes do deploy.
 
-> **Status:** parcial. A suite atual tem 30 testes aprovados e cobre RLS, concorrencia,
+> **Status:** parcial. A suite atual tem 52 testes aprovados em 8 arquivos e cobre RLS, concorrencia,
 > criacao/confirmacao/recusa de agendamento, timezone e autenticacao. Faltam E2E,
 > mobile, expiracao via endpoint e revisao de operacao.
 
