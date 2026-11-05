@@ -182,15 +182,15 @@ Testes, endurecimento e deploy
 
 > **Objetivo:** validar comportamento, seguranca e operacao antes do deploy.
 
-> **Status:** parcial. A suite atual tem 52 testes aprovados em 8 arquivos e cobre RLS, concorrencia,
-> criacao/confirmacao/recusa de agendamento, timezone e autenticacao. Faltam E2E,
-> mobile, expiracao via endpoint e revisao de operacao.
+> **Status:** parcial. A suite Vitest tem 52 testes em 8 arquivos; o Playwright cobre um E2E
+> do pedido público à confirmação administrativa. Ainda faltam mobile, expiração via endpoint,
+> cobertura completa das transições e revisão de operação.
 
 - [ ] Testar regras de dominio e todas as transicoes de status (parcial: faltam cancelamento, conclusao e expiracao).
 - [ ] Testar endpoints com sucesso, validacao, autorizacao e erro (parcial).
 - [x] Testar dois pedidos concorrentes para o mesmo horario.
 - [x] Testar RLS e isolamento em consultas, atualizacoes e exclusoes.
-- [ ] Testar o fluxo principal com um teste E2E.
+- [x] Testar o fluxo principal E2E: cliente solicita e administrador confirma o agendamento.
 - [ ] Validar responsividade em dispositivos mobile reais ou emuladores.
 - [ ] Revisar logs, mensagens de erro, CORS, rate limiting e segredos.
 - [ ] Revisar acessibilidade basica, estados de carregamento e estados vazios.

@@ -9,6 +9,7 @@ ampliados ao longo do desenvolvimento.
 - **Supertest:** chamadas HTTP contra uma instancia Express em memoria.
 - **TypeScript:** verificacao de tipos antes da execucao.
 - **ESLint:** verificacao de qualidade e padrao do codigo.
+- **Playwright:** teste de navegador do fluxo principal, incluindo cliente e painel administrativo.
 
 O Vitest executa somente arquivos `src/**/*.spec.ts` e ignora `dist/`. A pasta
 `dist` contem JavaScript compilado e nao deve ser descoberta como uma segunda copia
@@ -23,6 +24,14 @@ npm run test
 npm run lint
 npm run build
 ```
+
+Para executar o E2E, prepare antes um banco PostgreSQL local isolado cujo nome termine em `_test` ou `_e2e`, aplique as migrations e configure `DATABASE_URL` com a role restrita da aplicação:
+
+```bash
+NODE_ENV=test npm run test:e2e
+```
+
+`npm run test:e2e` primeiro executa `npm run typecheck:e2e` com `tsconfig.e2e.json` e então inicia backend/frontend em portas exclusivas. Cada execução prepara tenant, serviço e expediente por APIs locais. O cenário cria dados persistentes no banco escolhido, então não use o banco de produção nem um banco compartilhado.
 
 Na raiz, `npm test` executa os typechecks do backend e do frontend e, em seguida, a suíte Vitest do backend. Os testes de integração exigem PostgreSQL configurado com uma role de aplicação restrita, sem `SUPERUSER` e sem `BYPASSRLS`.
 
@@ -40,9 +49,9 @@ npm run test --prefix backend -- src/modules/auth/useCases/login/loginAndProvisi
 
 ## Suíte atual
 
-A suíte validada contém **8 arquivos de teste e 52 testes aprovados**. Ela cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento, conversão de fuso horário, concorrência e isolamento RLS entre tenants. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
+A suíte validada contém **8 arquivos Vitest e 52 testes aprovados**, além de **1 cenário E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento, conversão de fuso horário, concorrência e isolamento RLS entre tenants. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
 
-Os testes automatizados não substituem validação E2E do fluxo público, testes de responsividade em dispositivos móveis ou um smoke test em produção; esses itens continuam no roadmap.
+O cenário `e2e/booking-flow.spec.ts` valida, pelo navegador, solicitação pública, status `PENDENTE`, login administrativo, confirmação e persistência como `CONFIRMADO` após recarregar a agenda. Seu setup provisiona tenant/credenciais aleatórios e configura serviço/expediente por API. Os outros estados da interface, viewport mobile e smoke test em produção continuam no roadmap.
 
 ## Proximos testes
 
@@ -117,7 +126,7 @@ nao depende do fuso do processo que executa a suite.
 
 ### Frontend e operacao
 
-- [ ] Testar o fluxo publico completo.
+- [x] Testar o fluxo principal: pedido público seguido de confirmação administrativa (Playwright).
 - [ ] Testar estados de carregamento, erro e indisponibilidade.
 - [ ] Executar E2E em viewport mobile.
 - [ ] Executar smoke test no ambiente de producao.
