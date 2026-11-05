@@ -17,24 +17,24 @@ jobs:
   verify:
     name: Test, lint and build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: studiofy
+          POSTGRES_DB: studiofy_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d studiofy"
+          --health-cmd "pg_isready -U postgres -d studiofy_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://studiofy_app:studiofy_app_password@localhost:5432/studiofy
-      MIGRATION_DATABASE_URL: postgresql://postgres:postgres_password@localhost:5432/studiofy
+      DATABASE_URL: postgresql://studiofy_app:studiofy_app_password@localhost:5432/studiofy_test
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres_password@localhost:5432/studiofy_test
       JWT_SECRET: ci-only-jwt-secret-at-least-32-characters-long
       NODE_ENV: test
       TZ: UTC
@@ -62,12 +62,15 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Create restricted application database role
         run: |
           psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE studiofy_app LOGIN PASSWORD 'studiofy_app_password'
             NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
-          GRANT CONNECT ON DATABASE studiofy TO studiofy_app;
+          GRANT CONNECT ON DATABASE studiofy_test TO studiofy_app;
           GRANT USAGE ON SCHEMA public TO studiofy_app;
           SQL
 
@@ -83,6 +86,9 @@ jobs:
 
       - name: Run type checks and backend tests
         run: npm test
+
+      - name: Run end-to-end booking flow
+        run: npm run test:e2e
 
       - name: Run lint
         run: npm run lint
