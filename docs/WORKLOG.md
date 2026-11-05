@@ -5,6 +5,16 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-05 — Conferência dos módulos e da migration Superadmin
+
+- **Status:** Bloqueado; migration online não concluída por falta de permissão.
+- **Pedido:** Conferir a implementação documentada, sincronizar os módulos desta máquina e orientar a aplicação da migration no banco online.
+- **Contexto:** A Console Superadmin está implementada, mas a migration foi validada apenas em `studiofy_e2e`; a produção continua pendente.
+- **Decisão:** Sincronizar dependências pelo lockfile do backend. Para o banco real, seguir `docs/MIGRATION_GUIDE_SUPERADMIN.md` e usar `db:rls`, não `db:migrate`, que também gera migrations.
+- **Mudanças:** Executado `npm ci --prefix backend`; identificada divergência em `docs/DATABASE_MODEL.md`, que ainda não descreve `platform_admins`, `platform_audit_logs` nem o lifecycle do tenant. A tentativa autorizada de `npm run db:rls --prefix backend` não concluiu: PostgreSQL retornou `42501 permission denied for database neondb`.
+- **Validação:** `npm ls --depth=0 --prefix backend` e `npm run typecheck --prefix backend` aprovados. Não foi possível completar a migration nem reaplicar RLS/constraints; não foi feita alteração de permissões. O `npm ci` reportou 23 vulnerabilidades de dependências (15 moderadas, 6 altas e 2 críticas), sem correção automática.
+- **Pendências:** Configurar `MIGRATION_DATABASE_URL` com credencial que tenha acesso e privilégios de migration no banco de desenvolvimento e repetir o comando; atualizar o modelo de banco para refletir o schema Superadmin.
+
 ## 2026-11-05 — Guia manual para migration em produção
 
 - **Status:** Concluído; nenhuma ação executada no banco real.
