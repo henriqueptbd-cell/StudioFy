@@ -5,6 +5,14 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-05 — Publicação do mapa da Console da Plataforma
+
+- **Status:** Concluído
+- **Contexto:** Confirmação de publicação da atualização documental sobre a console superadmin e a liberação progressiva da agenda.
+- **Publicação:** Commit `4b8aeaa` enviado diretamente para `main`, sem PR; o GitHub Actions CI terminou com sucesso (run `42012638071`).
+- **Validação:** Prettier e `git diff --check` aprovados; nenhuma alteração de código ou execução de testes de aplicação nesta atualização documental.
+- **Pendências:** A implementação da console e a especificação da janela de liberação da agenda permanecem conforme os itens abertos do roadmap.
+
 ## 2026-11-05 — Conclusão: mapa da Console e da liberação de agenda
 
 - **Status:** Concluído
