@@ -41,8 +41,8 @@
 - **Contexto:** Os testes Vitest já cobriam regras do backend, mas ainda faltava validar a jornada visível de um cliente até a confirmação pelo estabelecimento.
 - **Decisão:** Usar Playwright/Chromium. A fixture cria tenant, credenciais, serviço e expediente pelas APIs reais; o navegador executa as telas pública e administrativa. O setup bloqueia bancos remotos ou fora de `_test`/`_e2e`, usa slug aleatório e portas separadas.
 - **Mudanças:** `.github/workflows/ci.yml`; dependência e scripts na raiz (`package.json` e `package-lock.json`); `playwright.config.ts`; `tsconfig.e2e.json`; `e2e/booking-flow.spec.ts`; `.gitignore`; `AGENTS.md`; `docs/CI.md`; `docs/TESTING.md`; `docs/ROADMAP.md`; `docs/WORKLOG.md`.
-- **Validação:** Em PostgreSQL local dedicado `studiofy_e2e`, `npm run test:e2e` passou (typecheck e 1 cenário); `npm test` passou (8 arquivos/52 testes); Prettier e `git diff --check` passaram; lint sem erros (2 warnings preexistentes); build aprovado (warning preexistente de bundle Vite acima de 500 kB).
-- **Pendências:** A execução remota do GitHub Actions será verificada após abrir a PR nova; cobertura de estados de erro/carregamento, mobile e smoke test de produção segue no roadmap.
+- **Validação:** Em PostgreSQL local dedicado `studiofy_e2e`, `npm run test:e2e` passou (typecheck e 1 cenário); `npm test` passou (8 arquivos/52 testes); Prettier e `git diff --check` passaram; lint sem erros (2 warnings preexistentes); build aprovado (warning preexistente de bundle Vite acima de 500 kB); GitHub Actions da PR #2 passou (1 check, 2m13s).
+- **Pendências:** Revisão e aceite do PR #2; cobertura de estados de erro/carregamento, mobile e smoke test de produção segue no roadmap.
 
 ## 2026-11-05 — CI do GitHub Actions para pull requests
 
