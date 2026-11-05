@@ -108,6 +108,7 @@ Todas as especificações técnicas, decisões de engenharia e cronogramas estã
 - 🌐 **[API_SPECIFICATION.md](docs/API_SPECIFICATION.md):** Contrato completo de rotas públicos e administrativos da API REST.
 - 🔐 **[SECURITY_AND_PRIVACY.md](docs/SECURITY_AND_PRIVACY.md):** Diretrizes de LGPD, isolamento multi-tenant e autenticação JWT.
 - 🧪 **[TESTING.md](docs/TESTING.md):** Estrutura e instrução para execução dos testes automatizados.
+- ⚙️ **[CI.md](docs/CI.md):** Workflow do GitHub Actions, banco de teste e verificações automáticas.
 - 🗺️ **[ROADMAP.md](docs/ROADMAP.md):** Checklist de progresso e planejamento executável das fases do MVP.
 - 📋 **[visao_do_produto.md](docs/visao_do_produto.md):** Escopo funcional, personas e regras do negócio.
 

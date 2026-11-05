@@ -24,6 +24,8 @@ npm run lint
 npm run build
 ```
 
+Na raiz, `npm test` executa os typechecks do backend e do frontend e, em seguida, a suíte Vitest do backend. Os testes de integração exigem PostgreSQL configurado com uma role de aplicação restrita, sem `SUPERUSER` e sem `BYPASSRLS`.
+
 Para executar somente os testes do backend:
 
 ```bash
@@ -36,30 +38,11 @@ Para executar um arquivo especifico:
 npm run test --prefix backend -- src/modules/auth/useCases/login/loginAndProvision.spec.ts
 ```
 
-## Suite atual
+## Suíte atual
 
-O primeiro teste automatizado esta em
-`backend/src/modules/auth/useCases/login/loginAndProvision.spec.ts`.
+A suíte validada contém **8 arquivos de teste e 52 testes aprovados**. Ela cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento, conversão de fuso horário, concorrência e isolamento RLS entre tenants. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
 
-Ele cobre o fluxo integrado da Fase 3:
-
-- provisionamento de tenant e administrador;
-- rejeicao de slug duplicado;
-- login com credenciais validas e emissao de JWT;
-- rejeicao de rota protegida sem token;
-- acesso de rota protegida com token valido.
-
-A suite atual foi executada com sucesso: **6 arquivos de teste e 41 testes aprovados**.
-
-## O que este teste garante
-
-O teste confirma a integracao entre Express, rotas, Zod, banco de dados, bcrypt,
-JWT, middleware de autenticacao, autorizacao por papel e tratamento padronizado de
-erros.
-
-Ele nao substitui os testes especificos de RLS, concorrencia ou banco em isolamento.
-A mensagem de resposta da rota protegida indica o contexto esperado, mas a prova de
-isolamento deve consultar o PostgreSQL com dois tenants e uma role sem `BYPASSRLS`.
+Os testes automatizados não substituem validação E2E do fluxo público, testes de responsividade em dispositivos móveis ou um smoke test em produção; esses itens continuam no roadmap.
 
 ## Proximos testes
 

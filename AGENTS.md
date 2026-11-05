@@ -43,7 +43,7 @@ Na raiz:
 ```bash
 npm run dev          # backend (3333) + frontend (5173) em paralelo
 npm run build        # build de backend e frontend
-npm test             # typecheck de backend e frontend
+npm test             # typecheck de backend e frontend + suíte Vitest do backend
 npm run lint         # ESLint de backend e frontend
 npm run format       # Prettier
 npm run db:migrate   # gera e aplica migrations

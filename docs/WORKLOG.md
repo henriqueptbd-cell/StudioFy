@@ -34,6 +34,16 @@
 
 ---
 
+## 2026-11-05 — CI do GitHub Actions para pull requests
+
+- **Status:** Concluído
+- **Pedido:** Criar um workflow do GitHub Actions, documentar o funcionamento, testar, commitar e abrir um PR para revisão.
+- **Contexto:** O repositório não tinha CI, e `npm test` na raiz fazia apenas typecheck em vez de executar a suíte Vitest.
+- **Decisão:** Executar CI em PRs para `main` e pushes para `main`, com PostgreSQL 16 descartável. Migrations usam conexão administrativa e os testes usam role separada, sem `SUPERUSER`, `BYPASSRLS` ou herança de privilégios. O workflow usa `db:rls` para não gerar migrations no checkout.
+- **Mudanças:** `.github/workflows/ci.yml`; `package.json` (`typecheck` separado e `test` incluindo Vitest); `AGENTS.md`; `docs/CI.md`; `docs/TESTING.md`; `docs/ROADMAP.md`; `docs/readme.md`; `readme.md`; `docs/WORKLOG.md`.
+- **Validação:** Em PostgreSQL 16 local, `npm run db:rls --prefix backend` aplicado; `npm test` aprovado (8 arquivos, 52 testes); `npm run lint` aprovado sem erros (2 warnings já existentes no frontend); `npm run build` aprovado (aviso preexistente de chunk Vite acima de 500 kB); `git diff --check` aprovado.
+- **Pendências:** Revisão e aceite do PR pelo usuário. A CI não altera regras de proteção da branch; o administrador pode marcar o check como obrigatório após revisar.
+
 ## 2026-10-24 — Fase 6: consulta de clientes do tenant
 
 - **Status:** Concluído
