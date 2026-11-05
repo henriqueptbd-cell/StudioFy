@@ -185,25 +185,30 @@ Poderá:
 
 O administrador poderá ser, por exemplo, a proprietária do salão.
 
-### 5.4 Proprietário da plataforma (fase posterior ao piloto)
+### 5.4 Proprietário da plataforma (Console da Plataforma — primeira versão)
 
-O proprietário da plataforma terá uma console separada do painel ADMIN dos salões,
-com acesso restrito ao proprietário e a eventuais administradores da aplicação
-convidados de forma controlada; não haverá cadastro público de superadministradores.
+A primeira versão da console está implementada, separada do painel ADMIN dos salões.
+A identidade fica em tabela própria e não há cadastro público; o proprietário e
+eventuais administradores são provisionados por comando operacional protegido, não
+por convite ou autoatendimento na interface.
 
-Poderá, dentro das permissões definidas:
+A console permite:
 
 - listar e pesquisar salões cadastrados;
 - consultar estatísticas agregadas para orientar decisões e futuras implementações,
-  sem expor nome, telefone ou agendamentos individuais de clientes por padrão;
+  sem expor nome, telefone ou agendamentos individuais de clientes; contagens de 1 a 4
+  são suprimidas para reduzir a identificação de grupos pequenos;
 - pausar ou reativar um salão; a pausa impede novos logins e agendamentos públicos,
   preservando os agendamentos e o histórico existentes;
-- editar campos de suporte previamente permitidos, com motivo e registro da alteração;
-- arquivar e restaurar salões sem apagar os dados.
+- editar somente nome, telefone, URL do logo e cor principal, com motivo e registro da alteração;
+- arquivar e restaurar salões sem apagar os dados, escolhendo explicitamente o estado de retorno.
 
-O arquivamento será reversível e não iniciará exclusão automática. Uma possível
-exclusão permanente será uma ação manual futura dentro da console, após definir
-retenção, efeitos em backups e métricas, permissões e auditoria.
+O arquivamento é reversível e não inicia exclusão automática. A pausa bloqueia novos
+logins, sessões existentes e operações públicas, preservando dados e agendamentos.
+JWT e segredo da plataforma são distintos dos usados pelos salões; a sessão expira
+em 15 minutos. MFA e hardening do armazenamento de token ainda são pendências antes
+de ampliar o acesso em produção. Exclusão permanente continua fora da interface e
+somente poderá ser avaliada como ação manual futura, com salvaguardas próprias.
 
 ---
 

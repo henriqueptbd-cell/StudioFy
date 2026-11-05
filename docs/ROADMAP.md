@@ -218,35 +218,38 @@ Console da Plataforma (apos piloto controlado)
 >
 > **Prioridade:** depois de um piloto inicial controlado; nao bloqueia a operacao com poucos saloes, mas e pre-requisito antes de abrir o cadastro para todos ou escalar.
 >
-> **Status:** planejada. As regras de identidade, acesso cross-tenant, auditoria e retencao devem ser fechadas antes da implementacao.
+> **Status:** primeira versão implementada e validada em `main`; migration aplicada somente ao banco local `studiofy_e2e`. MFA, hardening de sessão e filtro por data de cadastro permanecem pendentes. Nenhuma migration foi aplicada em produção.
+>
+> **Aplicação no banco real:** seguir o [guia de migration manual](./MIGRATION_GUIDE_SUPERADMIN.md); não foi executada nesta implementação.
 
 ### 9.1 Identidade e fronteira de seguranca
 
-- [ ] Definir identidade e papel proprios para PLATFORM_OWNER/PLATFORM_ADMIN, distintos de ADMIN e PROFESSIONAL dos saloes; sem cadastro publico e com criacao/invitacao controlada.
-- [ ] Definir autenticacao reforcada da plataforma: MFA, sessao curta, revogacao e revalidacao de acesso em operacoes criticas.
-- [ ] Projetar leitura e escrita cross-tenant como operacoes server-side estreitas e auditaveis; nao reutilizar a conta ADMIN de salao nem dar `BYPASSRLS` a role normal da aplicacao.
-- [ ] Testar que contas de tenant nao acessam a console nem elevam permissao, e que a excecao privilegiada nao vaza dados entre tenants.
+- [x] Usar identidade `platform_admins` separada de `ADMIN`/`PROFESSIONAL`, sem cadastro público e com provisionamento por comando operacional protegido.
+- [x] Usar segredo JWT, issuer e audience separados; token de 15 minutos e revalidação do estado ativo em cada chamada protegida.
+- [ ] Implementar MFA e migrar o token do `sessionStorage` para uma estratégia resistente a XSS antes de ampliar acesso em produção.
+- [x] Manter operações cross-tenant server-side e auditáveis; calcular métricas por `withTenant` sem conceder `BYPASSRLS` à role normal.
+- [x] Testar que JWTs de salão não acessam a console e que dados de métricas ficam sob RLS, sem PII.
 
 ### 9.2 Visao e operacao dos saloes
 
-- [ ] Listar, pesquisar e filtrar saloes por estado, data de cadastro e outros metadados operacionais minimos.
-- [ ] Exibir estatisticas agregadas para analise do produto, sem nomes, telefones ou linhas de agendamento de clientes por padrao; definir granularidade e suprimir grupos pequenos.
-- [ ] Permitir pausar e reativar um salao. Pausar bloqueia novos logins e novos agendamentos publicos, invalida sessoes existentes e preserva agendamentos e historico.
-- [ ] Permitir editar somente campos de suporte previamente permitidos, exigindo motivo e trilha de auditoria com ator, data e alteracoes.
-- [ ] Permitir arquivar e restaurar um salao sem exclusao em cascata. Arquivados saem das listas operacionais padrao, mas seus dados ficam preservados para analise dentro da politica de retencao.
-- [ ] Exigir escolha explicita ao restaurar: arquivar nao equivale a pausar, e restaurar nao reativa automaticamente login nem agendamentos publicos.
+- [x] Listar, pesquisar por nome/slug e filtrar por status; exibir data de cadastro. Filtro por período não entrou na primeira versão.
+- [x] Exibir métricas agregadas sem nomes, telefones ou linhas de agendamento; suprimir contagens de 1 a 4.
+- [x] Pausar e reativar; bloquear novos logins, sessões existentes e consultas/criações públicas, preservando dados e agendamentos.
+- [x] Editar somente nome, telefone, logo e cor, exigindo motivo e registrando ator, data e campos alterados.
+- [x] Arquivar e restaurar sem exclusão; contas arquivadas ficam fora da lista operacional padrão e preservam os dados.
+- [x] Exigir escolha explícita de `ACTIVE` ou `PAUSED` na restauração.
 
 ### 9.3 Exclusao permanente manual (etapa futura)
 
-- [ ] Nao excluir dados automaticamente ao pausar ou arquivar; manter arquivamento reversivel como comportamento inicial.
+- [x] Não excluir dados automaticamente ao pausar ou arquivar; manter arquivamento reversível como comportamento implementado.
 - [ ] Em etapa posterior, avaliar uma acao manual de exclusao permanente dentro da console, sem cron ou purga automatica.
 - [ ] Antes de habilitar a acao, definir retencao, efeitos em backups e metricas agregadas, autorizacao reforcada, previa de impacto, motivo obrigatorio, confirmacao forte, auditoria duravel e eventual aprovacao por segunda pessoa.
 
 ### 9.4 Criterios de aceite
 
-- [ ] Estatisticas da plataforma nao expoem dados pessoais de clientes por padrao e nao permitem identificar grupos pequenos.
-- [ ] Pausar bloqueia novas sessoes e novos pedidos publicos sem apagar ou alterar agendamentos existentes.
-- [ ] Arquivar/restaurar e reversivel, auditavel e nao executa hard delete.
+- [x] Estatísticas não expõem dados pessoais de clientes e suprimem grupos pequenos.
+- [x] Pausar bloqueia novas sessões e pedidos públicos sem apagar ou alterar agendamentos existentes.
+- [x] Arquivar/restaurar é reversível, auditável e não executa hard delete.
 - [ ] Exclusao permanente, se aprovada, e sempre manual, explicita e auditada; nunca automatica.
 
 ## Refinamentos de produto a especificar

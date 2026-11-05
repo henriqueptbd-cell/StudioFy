@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { expect, request, test, type APIRequestContext, type Page } from '@playwright/test';
 
 type ApiEnvelope<T> = {
@@ -12,6 +13,8 @@ type BookingFixture = {
   adminEmail: string;
   adminPassword: string;
   serviceName: string;
+  platformEmail: string;
+  platformPassword: string;
 };
 
 const loopbackHosts = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
@@ -128,7 +131,20 @@ test.beforeAll(async () => {
     adminEmail,
     adminPassword,
     serviceName,
+    platformEmail: `platform-${runId}@studiofy.test`,
+    platformPassword: `E2E-${runId}-Platform-Strong!`,
   };
+
+  execFileSync('npm', ['run', 'platform-admin:create', '--prefix', 'backend'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PLATFORM_ADMIN_NAME: 'Superadmin E2E',
+      PLATFORM_ADMIN_EMAIL: fixture.platformEmail,
+      PLATFORM_ADMIN_PASSWORD: fixture.platformPassword,
+    },
+    stdio: 'pipe',
+  });
 });
 
 test.afterAll(async () => {
@@ -208,4 +224,28 @@ test('cliente solicita e equipe confirma; painel também agenda para cliente exi
     .last()
     .locator('xpath=../../../..');
   await expect(assistedAppointmentCard.getByText('CONFIRMADO', { exact: true })).toBeVisible();
+});
+
+test('superadmin entra na console e pausa/reativa um tenant com motivo', async ({ page }) => {
+  await page.goto('/superadmin/login');
+  await page.getByRole('textbox', { name: 'E-mail administrativo' }).fill(fixture.platformEmail);
+  await page.getByLabel('Senha').fill(fixture.platformPassword);
+  await page.getByRole('button', { name: 'Entrar na plataforma' }).click();
+  await expect(page).toHaveURL(/\/superadmin$/);
+  await expect(page.getByRole('heading', { name: 'Estabelecimentos' })).toBeVisible();
+
+  await page.getByRole('textbox', { name: 'Buscar estabelecimentos' }).fill(fixture.slug);
+  const tenantRow = page.getByRole('row').filter({ hasText: fixture.slug });
+  await expect(tenantRow).toBeVisible();
+  await tenantRow.getByRole('button', { name: 'Gerenciar' }).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText(fixture.slug);
+  await dialog.locator('textarea').nth(1).fill('Pausa exercitada pelo cenário E2E.');
+  await dialog.getByRole('button', { name: 'Pausar', exact: true }).click();
+  await expect(dialog.getByText('Pausado', { exact: true })).toBeVisible();
+
+  await dialog.locator('textarea').nth(1).fill('Reativação exercitada pelo cenário E2E.');
+  await dialog.getByRole('button', { name: 'Reativar', exact: true }).click();
+  await expect(dialog.getByText('Ativo', { exact: true })).toBeVisible();
 });

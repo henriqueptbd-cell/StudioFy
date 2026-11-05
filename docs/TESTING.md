@@ -49,9 +49,22 @@ npm run test --prefix backend -- src/modules/auth/useCases/login/loginAndProvisi
 
 ## Suíte atual
 
-**A suíte validada contém 9 arquivos Vitest e 65 testes aprovados**, além de **1 cenário E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento público e assistido, conversão de fuso horário, concorrência e isolamento RLS entre tenants. A integração verifica que `PROFESSIONAL` pode consultar recursos permitidos e executar transições válidas, mas recebe 403 ao tentar alterar serviços, equipe ou configurações. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
+**A suíte validada contém 10 arquivos Vitest e 73 testes aprovados**, além de **2 cenários E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento público e assistido, conversão de fuso horário, concorrência, isolamento RLS entre tenants e a console da plataforma. A integração verifica que `PROFESSIONAL` pode consultar recursos permitidos e executar transições válidas, mas recebe 403 ao tentar alterar serviços, equipe ou configurações. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
 
-O cenário `e2e/booking-flow.spec.ts` valida, pelo navegador, solicitação pública, status `PENDENTE`, login administrativo, confirmação e persistência após recarregar a agenda; em seguida, seleciona o mesmo cliente existente no modal assistido e cria um segundo agendamento já `CONFIRMADO`. Seu setup provisiona tenant/credenciais aleatórios e configura serviço/expediente por API. Os outros estados da interface, viewport mobile e smoke test em produção continuam no roadmap.
+O cenário `e2e/booking-flow.spec.ts` valida, pelo navegador, solicitação pública, status `PENDENTE`, login administrativo, confirmação e persistência após recarregar a agenda; em seguida, seleciona o mesmo cliente existente no modal assistido e cria um segundo agendamento já `CONFIRMADO`. O segundo cenário autentica um superadmin provisionado pelo comando privado de bootstrap, localiza o tenant e pausa/reativa a conta pela console. O setup usa somente banco PostgreSQL loopback terminado em `_test` ou `_e2e`; não use produção nem banco compartilhado.
+
+### Console da Plataforma (Fase 9)
+
+`backend/src/modules/platform/platform.spec.ts` cobre:
+
+- identidade e segredo JWT independentes; JWT de salão rejeitado nas rotas da plataforma;
+- métricas carregadas via `withTenant`, sem PII e com supressão de contagens entre 1 e 4;
+- edição limitada de perfil, motivo obrigatório e auditoria;
+- pausa bloqueando sessão existente, novo login, consulta pública e criação pública;
+- arquivamento reversível, ocultação operacional padrão e restauração com status explícito;
+- trilha de auditoria append-only, inclusive bloqueio de tentativa de exclusão.
+
+MFA, revisão da estratégia `sessionStorage`/XSS, filtro temporal da lista e smoke test em ambiente publicado permanecem pendentes antes de ampliar o uso em produção.
 
 ## Proximos testes
 

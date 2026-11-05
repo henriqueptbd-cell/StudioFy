@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { PlatformAuthProvider } from '@/contexts/PlatformAuthContext';
 import { DEV_DEFAULT_SLUG } from '@/config';
 
 // Área pública
@@ -24,6 +25,10 @@ import { ServicesManagementPage } from '@/pages/admin/ServicesManagementPage';
 import { TeamManagementPage } from '@/pages/admin/TeamManagementPage';
 import { CustomersPage } from '@/pages/admin/CustomersPage';
 import { SettingsTabbedPage } from '@/pages/admin/SettingsTabbedPage';
+import { PlatformLoginPage } from '@/pages/platform/PlatformLoginPage';
+import { PlatformDashboardPage } from '@/pages/platform/PlatformDashboardPage';
+import { PlatformProtectedRoute } from '@/layouts/PlatformProtectedRoute';
+import { PlatformLayout } from '@/layouts/PlatformLayout';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,7 +49,9 @@ const NotFound: React.FC = () => (
 
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>{children}</AuthProvider>
+    <AuthProvider>
+      <PlatformAuthProvider>{children}</PlatformAuthProvider>
+    </AuthProvider>
     <Toaster position="top-center" />
   </QueryClientProvider>
 );
@@ -54,6 +61,19 @@ export const App: React.FC = () => {
     <AppProviders>
       <BrowserRouter>
         <Routes>
+          {/* Área da plataforma com sessão independente da administração dos salões */}
+          <Route path="/superadmin/login" element={<PlatformLoginPage />} />
+          <Route
+            path="/superadmin"
+            element={
+              <PlatformProtectedRoute>
+                <PlatformLayout />
+              </PlatformProtectedRoute>
+            }
+          >
+            <Route index element={<PlatformDashboardPage />} />
+          </Route>
+
           {/* Raiz: redireciona para o slug de demonstração em dev */}
           <Route path="/" element={<Navigate to={`/${DEV_DEFAULT_SLUG}`} replace />} />
 

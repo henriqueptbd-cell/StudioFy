@@ -100,3 +100,17 @@ CREATE TRIGGER trg_appointment_conflict
   BEFORE INSERT OR UPDATE ON appointments
   FOR EACH ROW
   EXECUTE FUNCTION check_appointment_conflict();
+
+-- A trilha da plataforma é append-only; somente inserções são permitidas à role da aplicação.
+CREATE OR REPLACE FUNCTION prevent_platform_audit_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'platform_audit_logs e append-only';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_platform_audit_immutable ON platform_audit_logs;
+CREATE TRIGGER trg_platform_audit_immutable
+  BEFORE UPDATE OR DELETE ON platform_audit_logs
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_platform_audit_mutation();

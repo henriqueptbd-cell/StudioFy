@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { and, eq } from 'drizzle-orm';
 import { withTenant } from '../../db/client.js';
-import { users } from '../../db/schema.js';
+import { tenants, users } from '../../db/schema.js';
 import { AppError } from '../errors/AppError.js';
 
 /**
@@ -17,15 +17,22 @@ export function ensureActiveUser(request: Request, _response: Response, next: Ne
     throw new AppError('Usuário não autenticado.', 401, 'UNAUTHORIZED');
   }
 
-  withTenant(tenantId, (tx) =>
-    tx
+  withTenant(tenantId, async (tx) => {
+    const [tenant] = await tx
+      .select({ status: tenants.status })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+    if (!tenant || tenant.status !== 'ACTIVE') return { active: false };
+    const [user] = await tx
       .select({ active: users.active })
       .from(users)
       .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
-      .limit(1),
-  )
-    .then(([user]) => {
-      if (!user || !user.active) {
+      .limit(1);
+    return { active: Boolean(user?.active) };
+  })
+    .then(({ active }) => {
+      if (!active) {
         throw new AppError('Usuário inativo no sistema.', 403, 'USER_INACTIVE');
       }
 

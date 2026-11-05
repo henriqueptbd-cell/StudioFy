@@ -1,13 +1,18 @@
 import 'express';
 
 declare global {
-    namespace Express {
-        export interface Request {
-            user?: {
-                id: string;
-                tenantId: string;
-                role: 'ADMIN' | 'PROFESSIONAL';
-            };
-        }
+  namespace Express {
+    export interface Request {
+      user?: {
+        id: string;
+        tenantId: string;
+        role: 'ADMIN' | 'PROFESSIONAL';
+      };
+      platformAdmin?: {
+        id: string;
+        name: string;
+        email: string;
+      };
     }
+  }
 }

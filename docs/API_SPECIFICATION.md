@@ -463,3 +463,35 @@ Todas as falhas da API seguem o formato:
   }
 }
 ```
+
+---
+
+## 5. Console da Plataforma (Superadmin)
+
+A console usa identidade própria em `platform_admins`, independente de `users` dos salões. Não existe endpoint público de cadastro. A primeira conta e contas adicionais são provisionadas operacionalmente pelo comando `npm run platform-admin:create --prefix backend`, com `PLATFORM_ADMIN_NAME`, `PLATFORM_ADMIN_EMAIL` e `PLATFORM_ADMIN_PASSWORD` fornecidos como variáveis de ambiente protegidas. A senha deve ter pelo menos 12 caracteres. Configure `PLATFORM_JWT_SECRET` com valor forte, distinto de `JWT_SECRET`; a expiração padrão do token de plataforma é 15 minutos e o middleware revalida se o administrador continua ativo em cada chamada protegida.
+
+Todas as rotas abaixo usam o prefixo `/api/v1/platform`. Apenas `POST /auth/login` é público (com rate limit); as demais exigem `Authorization: Bearer <platform-token>`. JWT de salão não é aceito nessa fronteira.
+
+### Login e identidade
+
+- `POST /auth/login` — corpo `{ "email": "...", "password": "..." }`; retorna token da plataforma e os campos públicos do administrador.
+- `GET /me` — identidade da sessão atual; acesso registrado na auditoria.
+
+### Lista, busca e métricas
+
+- `GET /tenants?page=1&pageSize=20&q=...&status=ACTIVE|PAUSED|ARCHIVED` — lista por nome/slug, pagina e filtra por estado. Sem `status`, retorna contas operacionais (`ACTIVE` e `PAUSED`), excluindo arquivadas. Cada item inclui somente perfil operacional permitido e métricas agregadas; nenhum nome ou telefone de cliente, nem registro individual de agendamento, é retornado.
+- `GET /overview` — totais globais agregados por status e atividade; a consulta de cada métrica de tenant roda sob `withTenant`, sem `BYPASSRLS`.
+
+Contagens entre 1 e 4 são retornadas como `null` para reduzir identificação de grupos pequenos; zero é exibido como zero e valores de 5 ou mais são exatos. A mesma supressão vale para cada contagem de status de agendamento. O frontend não converte `null` em zero e indica que o subtotal é parcial.
+
+### Perfil e ciclo de vida
+
+Toda alteração exige `reason` (3–500 caracteres) e registra ator, tenant, finalidade, campos/transição e data em `platform_audit_logs`, na mesma transação da alteração:
+
+- `PATCH /tenants/:tenantId` — altera somente `name`, `phone`, `logoUrl` e `primaryColor`; `slug` e `timezone` não são editáveis pela console.
+- `POST /tenants/:tenantId/pause` e `POST /tenants/:tenantId/reactivate` — corpo `{ "reason": "..." }`; pausa bloqueia login, chamadas autenticadas existentes e rotas públicas, sem apagar histórico.
+- `POST /tenants/:tenantId/archive` — corpo `{ "reason": "..." }`; arquiva sem exclusão automática e retira da lista operacional padrão.
+- `POST /tenants/:tenantId/restore` — corpo `{ "status": "ACTIVE" | "PAUSED", "reason": "..." }`; a escolha de status é obrigatória e restauração não reativa por omissão.
+- `GET /audit-logs?tenantId=<uuid>&limit=20` — últimos eventos vinculados ao tenant; a própria consulta também é auditada. Atualização e exclusão dos logs são bloqueadas por constraint/trigger no banco.
+
+Ações de exclusão permanente não existem nesta versão. Arquivamento é reversível e preserva registros para análise posterior; a eventual exclusão manual exige requisitos e salvaguardas próprios. MFA não está implementado e deve ser tratado como hardening pendente antes de ampliar o acesso administrativo em produção.

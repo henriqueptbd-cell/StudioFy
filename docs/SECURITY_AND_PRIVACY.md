@@ -90,8 +90,8 @@ A autenticação se aplica a administradores e profissionais.
 - O login deve responder com erro genérico para credencial inválida.
 - O JWT deve conter apenas claims necessários, como `sub`, `tenant_id`, `role`, `iat` e `exp`.
 - Tokens devem ter expiração curta e não devem ser aceitos após a conta ser desativada; as rotas administrativas verificam o status atual do usuário via middleware `ensureActiveUser`.
-- `JWT_SECRET` deve ser fornecido por variável de ambiente e nunca ser versionado.
-- A estratégia de armazenamento do token no frontend deve evitar exposição a XSS; se cookies forem usados, devem ser `HttpOnly`, `Secure` e `SameSite` apropriados.
+- `JWT_SECRET` deve ser fornecido por variável de ambiente e nunca ser versionado. O superadmin usa `PLATFORM_JWT_SECRET` independente, sem fallback para o segredo de salão; os tokens da plataforma têm expiração padrão de 15 minutos e o middleware revalida a conta ativa a cada chamada protegida.
+- O token superadmin fica em `sessionStorage`, separado do token de salão; isso limita persistência após fechar a aba, mas ainda é acessível a JavaScript e não elimina risco de XSS. A migração para cookie `HttpOnly`, `Secure` e `SameSite` deve ser avaliada antes de produção.
 - Recuperação de senha, refresh token e MFA ficam fora do MVP até serem especificados.
 
 ## 6. Autorização por papel
@@ -113,18 +113,18 @@ sem autorização explícita.
 A interface pode ocultar ações sem permissão, mas a decisão final deve ocorrer no
 backend.
 
-### Administrador da plataforma (console futura)
+### Administrador da plataforma (console)
 
-O papel de plataforma será separado de `ADMIN` e `PROFESSIONAL` dos tenants. Não haverá
-cadastro público; a conta do proprietário será provisionada de forma controlada, e
-eventuais administradores adicionais serão convidados. A console exigirá autenticação
-reforçada, sessão curta e revogável, e revalidação de autorização em operações críticas.
+A identidade existe em `platform_admins`, separada de `users` dos tenants; não há cadastro
+público e a criação é feita por comando operacional protegido. `PLATFORM_JWT_SECRET`,
+issuer e audience são distintos dos tokens de salão. MFA ainda não está implementado.
 
-Operações cross-tenant serão casos de uso server-side explícitos, com escopo mínimo e
-auditoria de ator, salão, finalidade e resultado. Não confiar em `tenant_id` do navegador,
-reutilizar login de salão nem conceder `BYPASSRLS` à role normal da aplicação. Métricas
-serão agregadas por padrão; acesso excepcional a dados identificáveis exigirá permissão
-específica e motivo registrado.
+Operações cross-tenant são casos de uso server-side explícitos e auditados. As métricas
+consultam dados de cada tenant dentro de `withTenant`, sem `BYPASSRLS` na role normal da
+aplicação, e suprimem contagens entre 1 e 4. A lista usa metadados operacionais globais
+do tenant, mas nunca retorna PII de clientes ou linhas individuais de agendamentos.
+Edição, pausa, reativação, arquivamento, restauração e leitura de auditoria exigem motivo
+quando aplicável e registram o ator; logs de auditoria são append-only no banco.
 
 ## 7. Rotas públicas e prevenção de abuso
 
@@ -230,12 +230,7 @@ Em caso de incidente:
 
 Antes do desenvolvimento das funcionalidades correspondentes, devem ser definidos:
 
-- armazenamento do JWT no frontend;
-- expiração, revogação e eventual refresh token;
-- política de retenção e exclusão de clientes e agendamentos;
-- limite de rate limiting por IP e tenant;
-- necessidade de auditoria persistente além dos logs operacionais;
-- identidade, papéis, MFA, revogação e limites de acesso cross-tenant da console de plataforma;
-- efeitos de pausa em sessões existentes e agendamentos públicos, e estados de arquivamento/restauração;
-- métricas agregadas permitidas, granularidade mínima e retenção dos dados arquivados;
+- MFA e modelo final de armazenamento/revogação do token superadmin antes de produção;
+- monitoramento/alerta para tentativas de login e eventos de auditoria da console;
+- política de retenção dos dados arquivados e salvaguardas para exclusão manual futura;
 - escopo e salvaguardas da exclusão permanente manual, incluindo backups e eventual preservação de métricas anonimizadas.

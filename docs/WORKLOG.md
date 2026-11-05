@@ -5,6 +5,36 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-05 — Guia manual para migration em produção
+
+- **Status:** Concluído; nenhuma ação executada no banco real.
+- **Pedido:** Deixar a migration versionada e documentar como o proprietário poderá aplicá-la manualmente ao banco online.
+- **Decisão:** A migration foi testada somente em `studiofy_e2e`; produção permanece intocada. O manual orienta backup, conferência do journal, uso separado de URL de migração e role da aplicação, grants mínimos, verificação pós-aplicação, bootstrap seguro do superadmin e rollback preservando o schema/auditoria.
+- **Mudanças:** Criado `docs/MIGRATION_GUIDE_SUPERADMIN.md`; o guia aponta para `backend/drizzle/0003_familiar_shockwave.sql` e recomenda `npm run db:rls --prefix backend`, sem geração automática de novas migrations.
+- **Validação:** Comando e ordem de execução conferidos em `backend/src/db/migrate.ts`; exemplos usam consultas de inspeção e não incluem credenciais. Nenhuma conexão ou comando foi direcionado ao banco de produção.
+- **Pendências:** O proprietário aplicará a migration no banco real após backup e revisão do guia.
+
+## 2026-11-05 — Conclusão: Console Superadmin (Fase 9)
+
+- **Status:** Concluído e validado localmente.
+- **Pedido:** Implementar diretamente em `main` a primeira versão da Console da Plataforma para listar salões, consultar métricas, editar campos permitidos, pausar/reativar e arquivar/restaurar contas.
+- **Decisões:** Identidade `platform_admins` separada de usuários de salão, sem cadastro público; JWT, segredo, issuer e audience próprios; métricas sem PII calculadas por tenant com `withTenant`; grupos de 1–4 suprimidos; auditoria append-only para operações administrativas; arquivamento reversível sem expurgo automático. MFA e hardening adicional de sessão ficam pendentes.
+- **Mudanças:** Migration `0003_familiar_shockwave.sql`, estados `ACTIVE`/`PAUSED`/`ARCHIVED`, rotas/controller/middleware de plataforma e bloqueios de tenant inativo; interface superadmin em sessão separada; comando privado `platform-admin:create`; trigger que impede UPDATE/DELETE no audit log; API spec, segurança, roadmap e testes atualizados.
+- **Validação:** Migration aplicada somente em `studiofy_e2e`; role de teste sem `SUPERUSER`/`BYPASSRLS`. `npm test`: 10 arquivos/73 testes aprovados. `npm run test:e2e`: 2 cenários aprovados. Typechecks, lint (0 erros; 2 avisos preexistentes de Fast Refresh), build backend/frontend, Prettier e `git diff --check` aprovados. Build frontend mantém o aviso existente de bundle acima de 500 kB.
+- **Segurança/produção:** Nenhuma migration executada em produção. A estratégia atual usa `sessionStorage`; revisar XSS, MFA e configuração de segredos fortes antes de ampliar o acesso. Exclusão permanente continua fora do escopo e sem endpoint.
+- **Publicação:** Entrega validada para publicação diretamente em `main`, sem PR, conforme orientação do proprietário.
+- **Pendências:** Definir MFA e armazenamento de token mais resistente a XSS; avaliar filtro temporal da lista; planejar eventual exclusão manual apenas com política de retenção e salvaguardas. A janela progressiva de liberação de agenda segue item separado no roadmap.
+
+## 2026-11-05 — Implementar Console Superadmin
+
+- **Status:** Em andamento
+- **Pedido:** Implementar a primeira versão da página superadmin, com login de plataforma separado, listagem e estatísticas agregadas, edição permitida, pausa/reativação e arquivamento/restauração.
+- **Contexto:** O proprietário autorizou schema e implementação após definirmos o escopo; o painel precisa atravessar tenants sem reutilizar identidade de salão nem contornar RLS.
+- **Decisão:** Criar identidade de plataforma sem cadastro público, lifecycle explícito do tenant e auditoria; métricas serão calculadas por tenant usando o contexto RLS. Exclusão permanente fica fora; MFA pode ser endurecimento posterior. Nenhuma migration será executada em produção.
+- **Mudanças:** Planejadas em schema/migration/RLS, API, frontend, testes e documentação de produto/segurança.
+- **Validação:** Pendente.
+- **Pendências:** Implementar, auditar, validar em banco local descartável e publicar diretamente em `main`, sem PR.
+
 ## 2026-11-05 — Publicação do mapa da Console da Plataforma
 
 - **Status:** Concluído
