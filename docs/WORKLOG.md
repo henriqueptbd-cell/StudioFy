@@ -5,6 +5,27 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-05 — Conclusão: mapa da Console e da liberação de agenda
+
+- **Status:** Concluído
+- **Pedido:** Registrar a futura página superadmin e, como item separado para detalhar depois, a abertura progressiva da agenda pública até uma data escolhida pelo salão.
+- **Contexto:** O proprietário precisa gerir salões de forma distinta dos admins de tenant; a equipe também quer liberar datas futuras gradualmente sem expor toda a agenda de uma vez.
+- **Decisão:** Planejar a Console após o piloto inicial, com identidade separada, dados analíticos agregados, pausa de login e novos pedidos sem apagar reservas existentes, arquivamento reversível e sem expurgo automático. Exclusão permanente fica manual, em etapa futura e com salvaguardas. A agenda permanece como está até especificarmos data padrão, limite máximo, papéis autorizados e comportamento ao reduzir a janela.
+- **Mudanças:** `docs/ROADMAP.md` recebeu a Fase 9 e o refinamento da agenda; `docs/visao_do_produto.md` descreve o proprietário da plataforma; `docs/SECURITY_AND_PRIVACY.md` registra fronteira cross-tenant, minimização e decisões pendentes.
+- **Validação:** Leitura do código confirmou limite atual de 30 dias no backend e seletor público com 8 datas consecutivas; Prettier e `git diff --check` aprovados. Nenhum código foi implementado nem testes de aplicação executados nesta tarefa documental.
+- **Publicação:** Atualização documental será publicada diretamente em `main`, sem PR, conforme orientação do usuário.
+- **Pendências:** Implementar a console só após definir identidade, acesso privilegiado, auditoria e retenção; especificar depois os parâmetros da liberação progressiva da agenda.
+
+## 2026-11-05 — Planejar Console da Plataforma
+
+- **Status:** Em andamento
+- **Pedido:** Mapear no roadmap uma console restrita do proprietário da plataforma para listar salões, acompanhar estatísticas, pausar/reativar, editar e arquivar; manter a exclusão permanente manual e não automática.
+- **Contexto:** A operação multi-tenant precisa de ferramentas próprias do dono da aplicação, distintas do painel ADMIN de cada salão, sem perder o histórico arquivado usado em análises.
+- **Decisão:** Tratar como fase separada após o piloto inicial; usar arquivamento reversível sem expurgo automático e planejar a exclusão manual explícita em uma etapa posterior. Registrar limites de acesso, privacidade e auditoria ainda a decidir.
+- **Mudanças:** Planejadas em `docs/ROADMAP.md`, `docs/visao_do_produto.md`, `docs/SECURITY_AND_PRIVACY.md` e este worklog.
+- **Validação:** Pendente.
+- **Pendências:** Incorporar os limites aprovados, revisar formatação e concluir o registro.
+
 ## 2026-11-05 — Conclusão: cadastro rápido e agendamento assistido
 
 - **Status:** Concluído

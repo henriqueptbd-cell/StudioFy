@@ -185,6 +185,26 @@ Poderá:
 
 O administrador poderá ser, por exemplo, a proprietária do salão.
 
+### 5.4 Proprietário da plataforma (fase posterior ao piloto)
+
+O proprietário da plataforma terá uma console separada do painel ADMIN dos salões,
+com acesso restrito ao proprietário e a eventuais administradores da aplicação
+convidados de forma controlada; não haverá cadastro público de superadministradores.
+
+Poderá, dentro das permissões definidas:
+
+- listar e pesquisar salões cadastrados;
+- consultar estatísticas agregadas para orientar decisões e futuras implementações,
+  sem expor nome, telefone ou agendamentos individuais de clientes por padrão;
+- pausar ou reativar um salão; a pausa impede novos logins e agendamentos públicos,
+  preservando os agendamentos e o histórico existentes;
+- editar campos de suporte previamente permitidos, com motivo e registro da alteração;
+- arquivar e restaurar salões sem apagar os dados.
+
+O arquivamento será reversível e não iniciará exclusão automática. Uma possível
+exclusão permanente será uma ação manual futura dentro da console, após definir
+retenção, efeitos em backups e métricas, permissões e auditoria.
+
 ---
 
 ## 6. Agendamento

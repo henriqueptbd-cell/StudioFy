@@ -23,6 +23,9 @@ Painel administrativo
   |
   v
 Testes, endurecimento e deploy
+  |
+  v
+Console da Plataforma (apos piloto controlado)
 ```
 
 ## FASE 0: Escopo e regras do MVP
@@ -208,6 +211,59 @@ Testes, endurecimento e deploy
 - [ ] Configurar dominio, HTTPS e politica de origem permitida.
 - [ ] Executar smoke test do fluxo principal em producao.
 - [ ] Documentar rollback, backup e procedimento de restauracao.
+
+## FASE 9: Console do proprietario da plataforma
+
+> **Objetivo:** permitir que o proprietario da plataforma acompanhe e administre os saloes sem misturar essa autoridade com o ADMIN de um tenant.
+>
+> **Prioridade:** depois de um piloto inicial controlado; nao bloqueia a operacao com poucos saloes, mas e pre-requisito antes de abrir o cadastro para todos ou escalar.
+>
+> **Status:** planejada. As regras de identidade, acesso cross-tenant, auditoria e retencao devem ser fechadas antes da implementacao.
+
+### 9.1 Identidade e fronteira de seguranca
+
+- [ ] Definir identidade e papel proprios para PLATFORM_OWNER/PLATFORM_ADMIN, distintos de ADMIN e PROFESSIONAL dos saloes; sem cadastro publico e com criacao/invitacao controlada.
+- [ ] Definir autenticacao reforcada da plataforma: MFA, sessao curta, revogacao e revalidacao de acesso em operacoes criticas.
+- [ ] Projetar leitura e escrita cross-tenant como operacoes server-side estreitas e auditaveis; nao reutilizar a conta ADMIN de salao nem dar `BYPASSRLS` a role normal da aplicacao.
+- [ ] Testar que contas de tenant nao acessam a console nem elevam permissao, e que a excecao privilegiada nao vaza dados entre tenants.
+
+### 9.2 Visao e operacao dos saloes
+
+- [ ] Listar, pesquisar e filtrar saloes por estado, data de cadastro e outros metadados operacionais minimos.
+- [ ] Exibir estatisticas agregadas para analise do produto, sem nomes, telefones ou linhas de agendamento de clientes por padrao; definir granularidade e suprimir grupos pequenos.
+- [ ] Permitir pausar e reativar um salao. Pausar bloqueia novos logins e novos agendamentos publicos, invalida sessoes existentes e preserva agendamentos e historico.
+- [ ] Permitir editar somente campos de suporte previamente permitidos, exigindo motivo e trilha de auditoria com ator, data e alteracoes.
+- [ ] Permitir arquivar e restaurar um salao sem exclusao em cascata. Arquivados saem das listas operacionais padrao, mas seus dados ficam preservados para analise dentro da politica de retencao.
+- [ ] Exigir escolha explicita ao restaurar: arquivar nao equivale a pausar, e restaurar nao reativa automaticamente login nem agendamentos publicos.
+
+### 9.3 Exclusao permanente manual (etapa futura)
+
+- [ ] Nao excluir dados automaticamente ao pausar ou arquivar; manter arquivamento reversivel como comportamento inicial.
+- [ ] Em etapa posterior, avaliar uma acao manual de exclusao permanente dentro da console, sem cron ou purga automatica.
+- [ ] Antes de habilitar a acao, definir retencao, efeitos em backups e metricas agregadas, autorizacao reforcada, previa de impacto, motivo obrigatorio, confirmacao forte, auditoria duravel e eventual aprovacao por segunda pessoa.
+
+### 9.4 Criterios de aceite
+
+- [ ] Estatisticas da plataforma nao expoem dados pessoais de clientes por padrao e nao permitem identificar grupos pequenos.
+- [ ] Pausar bloqueia novas sessoes e novos pedidos publicos sem apagar ou alterar agendamentos existentes.
+- [ ] Arquivar/restaurar e reversivel, auditavel e nao executa hard delete.
+- [ ] Exclusao permanente, se aprovada, e sempre manual, explicita e auditada; nunca automatica.
+
+## Refinamentos de produto a especificar
+
+### Liberacao progressiva da agenda (ideia registrada; nao implementada)
+
+O limite atual do backend e de 30 dias a frente; o seletor publico exibe somente 8
+datas consecutivas por vez. Ainda nao existe uma configuracao do salao para escolher
+ate que data futura a agenda fica aberta. Nao assumir que a reserva por seis meses ja
+seja permitida.
+
+- [ ] Definir a data padrao de liberacao, o horizonte maximo e se o salao podera ampliar esse limite em etapas (por exemplo, abrir o proximo mes).
+- [ ] Definir se ADMIN, PROFESSIONAL ou ambos podem alterar a data de liberacao.
+- [ ] Desenhar no painel o campo `Agenda aberta ate` com seletor de data; somente datas ate esse limite aparecem para reserva publica.
+- [ ] Persistir a data por salao e aplica-la no backend tanto na consulta de horarios quanto na criacao do agendamento; a interface nao e a unica protecao.
+- [ ] Definir semantica no fuso do salao e o que acontece se a data for reduzida depois de ja haver agendamentos futuros.
+- [ ] Cobrir limites de data, autorizacao e timezone nos testes antes de habilitar a configuracao.
 
 ## Backlog pos-MVP
 

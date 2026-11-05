@@ -113,6 +113,19 @@ sem autorização explícita.
 A interface pode ocultar ações sem permissão, mas a decisão final deve ocorrer no
 backend.
 
+### Administrador da plataforma (console futura)
+
+O papel de plataforma será separado de `ADMIN` e `PROFESSIONAL` dos tenants. Não haverá
+cadastro público; a conta do proprietário será provisionada de forma controlada, e
+eventuais administradores adicionais serão convidados. A console exigirá autenticação
+reforçada, sessão curta e revogável, e revalidação de autorização em operações críticas.
+
+Operações cross-tenant serão casos de uso server-side explícitos, com escopo mínimo e
+auditoria de ator, salão, finalidade e resultado. Não confiar em `tenant_id` do navegador,
+reutilizar login de salão nem conceder `BYPASSRLS` à role normal da aplicação. Métricas
+serão agregadas por padrão; acesso excepcional a dados identificáveis exigirá permissão
+específica e motivo registrado.
+
 ## 7. Rotas públicas e prevenção de abuso
 
 As rotas públicas de tenant, serviços, disponibilidade e criação de agendamento
@@ -149,6 +162,8 @@ O MVP deve seguir minimização e finalidade clara:
 - o telefone é usado para identificar a solicitação e permitir contato do estabelecimento;
 - solicitacoes `PENDENTE` expiram em 12 horas ou 1 hora antes do atendimento, o que ocorrer primeiro;
 - o acesso aos dados do cliente fica restrito ao tenant responsável e aos usuários autorizados;
+- acesso da equipe da plataforma a dados de outros tenants será excepcional, limitado à finalidade e auditado; análises de produto usarão métricas agregadas sem PII por padrão;
+- pausar ou arquivar um salão não apagará clientes nem agendamentos; a exclusão permanente não será automática e dependerá de uma ação manual futura, retenção definida e auditoria;
 - dados pessoais não devem ser incluídos em URLs, logs ou mensagens de erro;
 - o sistema deve documentar retenção, exclusão e atendimento de solicitações do titular antes da operação em produção;
 - o estabelecimento deve ser informado sobre sua responsabilidade pelos dados inseridos na plataforma.
@@ -219,4 +234,8 @@ Antes do desenvolvimento das funcionalidades correspondentes, devem ser definido
 - expiração, revogação e eventual refresh token;
 - política de retenção e exclusão de clientes e agendamentos;
 - limite de rate limiting por IP e tenant;
-- necessidade de auditoria persistente além dos logs operacionais.
+- necessidade de auditoria persistente além dos logs operacionais;
+- identidade, papéis, MFA, revogação e limites de acesso cross-tenant da console de plataforma;
+- efeitos de pausa em sessões existentes e agendamentos públicos, e estados de arquivamento/restauração;
+- métricas agregadas permitidas, granularidade mínima e retenção dos dados arquivados;
+- escopo e salvaguardas da exclusão permanente manual, incluindo backups e eventual preservação de métricas anonimizadas.
