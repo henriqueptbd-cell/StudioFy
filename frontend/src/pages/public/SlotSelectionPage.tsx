@@ -8,16 +8,37 @@ import { DatePickerHorizontal } from '@/components/public/DatePickerHorizontal';
 import { SlotGrid } from '@/components/public/SlotGrid';
 import { BookingSteps } from '@/components/public/BookingSteps';
 import { PublicFooter } from '@/components/public/PublicFooter';
-import { todayISO } from '@/utils/format';
+import { DEFAULT_TZ, todayInTimeZone } from '@/utils/timezone';
 
 export const SlotSelectionPage: React.FC = () => {
   const { tenant, slug, service, date, time, setDate, setTime } = useBooking();
+  const timezone = tenant?.timezone || DEFAULT_TZ;
+  const today = todayInTimeZone(timezone);
+  const publicBookingUntil = tenant?.publicBookingUntil || today;
+  const hasPublicDates = publicBookingUntil >= today;
+  const effectiveDate =
+    hasPublicDates && date && date >= today && date <= publicBookingUntil
+      ? date
+      : hasPublicDates
+        ? today
+        : '';
 
   useEffect(() => {
-    if (!date) setDate(todayISO());
-  }, [date, setDate]);
+    if (!tenant) return;
+    if (!hasPublicDates) {
+      if (date) {
+        setDate('');
+        setTime(null);
+      }
+      return;
+    }
+    if (!date || date < today || date > publicBookingUntil) {
+      setDate(today);
+      setTime(null);
+    }
+  }, [date, hasPublicDates, publicBookingUntil, setDate, setTime, tenant, today]);
 
-  const { data: slotHit, isLoading } = usePublicSlots(slug, date || todayISO(), service?.id || '');
+  const { data: slotHit, isLoading } = usePublicSlots(slug, effectiveDate, service?.id || '');
 
   if (!tenant) return null;
   if (!service) {
@@ -49,8 +70,10 @@ export const SlotSelectionPage: React.FC = () => {
 
         <div className="mt-4">
           <DatePickerHorizontal
-            selectedDate={date || todayISO()}
+            selectedDate={effectiveDate}
             tenantColor={tenant.primaryColor}
+            timezone={timezone}
+            publicBookingUntil={publicBookingUntil}
             onSelect={(d) => {
               setDate(d);
               setTime(null);

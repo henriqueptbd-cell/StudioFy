@@ -1,22 +1,29 @@
-# Guia de aplicação — Console Superadmin
+# Guia de aplicação — Console Superadmin e agenda pública
 
-Este procedimento prepara a migration da Console da Plataforma para o banco real. **A migration não foi aplicada em produção**: a validação feita nesta implementação usou somente o banco local `studiofy_e2e`.
+Este procedimento prepara as migrations da Console da Plataforma e da janela progressiva da agenda para o banco real. **Nenhuma migration foi aplicada em produção**: a validação desta tarefa usou somente o banco local `studiofy_e2e`.
 
-## O que a migration altera
+## O que as migrations alteram
 
-O arquivo versionado é `backend/drizzle/0003_familiar_shockwave.sql`. Ele:
+`backend/drizzle/0003_familiar_shockwave.sql`:
 
 - adiciona `tenants.status` (`ACTIVE` por padrão), `paused_at` e `archived_at`, sem apagar dados existentes;
 - cria `platform_admins`, identidade separada dos usuários dos salões;
 - cria `platform_audit_logs`, com vínculo opcional ao tenant e índices;
 - adiciona índices e uma constraint para os três estados permitidos.
 
-O comando de aplicação também reaplica `database/rls.sql` e `database/constraints.sql`. Esses scripts são idempotentes para a configuração esperada do StudioFy; o segundo recria os triggers de integridade e o trigger append-only da auditoria. Não rode `npm run db:migrate` para esta etapa, pois esse script também executa `drizzle-kit generate` e pode gerar arquivos novos localmente. Use `db:rls`, que aplica migrations já versionadas e as políticas/constraints.
+`backend/drizzle/0004_public_booking_until.sql`:
+
+- adiciona `tenants.public_booking_until` como `DATE NOT NULL`;
+- preenche tenants existentes com a data local do estabelecimento +30 dias;
+- define um default SQL de `CURRENT_DATE + 30`; o provisionamento da aplicação calcula
+  explicitamente hoje +30 no timezone do novo tenant.
+
+O comando de aplicação também reaplica `database/rls.sql` e `database/constraints.sql`. Esses scripts são idempotentes para a configuração esperada do StudioFy; o segundo recria os triggers de integridade e o trigger append-only da auditoria. Não rode `npm run db:migrate` para esta etapa, pois esse script também executa `drizzle-kit generate` e pode gerar arquivos novos localmente. Use `db:rls`, que aplica todas as migrations versionadas ainda pendentes e as políticas/constraints.
 
 ## Antes de começar
 
 1. Faça e valide um backup/snapshot restaurável do banco real. Execute em uma janela de mudança e tenha acesso à pessoa responsável pelo PostgreSQL.
-2. Confirme que o código implantado contém `0003_familiar_shockwave.sql`, `0003_snapshot.json` e o journal Drizzle atualizado. Não edite o SQL versionado nem gere migration no servidor.
+2. Confirme que o release contém `0003_familiar_shockwave.sql`, `0003_snapshot.json`, `0004_public_booking_until.sql`, `0004_snapshot.json` e o journal Drizzle atualizado. Se `0003` já foi aplicado em uma implantação anterior, `db:rls` aplicará somente `0004`; se ainda estiver pendente, aplicará ambas em ordem. Não edite o SQL versionado nem gere migration no servidor.
 3. Confirme host e nome do banco sem imprimir a URL completa ou credenciais. Verifique o histórico Drizzle em `drizzle.__drizzle_migrations`; a migration nova deve aparecer somente depois da aplicação. Se o histórico real divergir dos arquivos `backend/drizzle/meta/_journal.json`, pare e reconcilie o estado com a pessoa responsável pelo banco antes de continuar.
 4. Use uma URL de migração (`MIGRATION_DATABASE_URL`) com privilégio suficiente para criar/alterar tabelas e constraints. A URL da aplicação (`DATABASE_URL`) deve continuar usando a role restrita, sem `SUPERUSER` e sem `BYPASSRLS`. Não conceda `BYPASSRLS` à role da aplicação.
 5. Defina `PLATFORM_JWT_SECRET` com um segredo aleatório forte de pelo menos 32 caracteres, diferente de `JWT_SECRET`, e mantenha `PLATFORM_JWT_EXPIRES_IN=15m`. Configure esses valores no gerenciador de segredos do ambiente, sem commitá-los, copiá-los para tickets ou mostrá-los em logs.
@@ -58,14 +65,18 @@ Conectado ao banco real com uma role de inspeção apropriada, confirme:
 
 ```sql
 SELECT id, created_at FROM drizzle.__drizzle_migrations ORDER BY id;
-SELECT id, created_at FROM drizzle.__drizzle_migrations WHERE created_at = 1793879291270;
+SELECT id, created_at FROM drizzle.__drizzle_migrations WHERE created_at IN (1793879291270, 1793890523999);
 
 SELECT column_name, column_default, is_nullable
 FROM information_schema.columns
 WHERE table_schema = 'public'
   AND table_name = 'tenants'
-  AND column_name IN ('status', 'paused_at', 'archived_at')
+  AND column_name IN ('status', 'paused_at', 'archived_at', 'public_booking_until')
 ORDER BY column_name;
+
+SELECT count(*) AS tenants_sem_data_publica
+FROM tenants
+WHERE public_booking_until IS NULL;
 
 SELECT to_regclass('public.platform_admins'), to_regclass('public.platform_audit_logs');
 
@@ -75,7 +86,7 @@ WHERE tgrelid = 'public.platform_audit_logs'::regclass
   AND NOT tgisinternal;
 ```
 
-Confirme também que os tenants existentes aparecem com `status = 'ACTIVE'`, que os índices e a constraint de status estão presentes, e que a role da aplicação não tem `SUPERUSER` nem `BYPASSRLS`. Faça um smoke test controlado de login da aplicação e da console sem pausar ou arquivar um salão real durante a validação.
+Confirme também que os tenants existentes aparecem com `status = 'ACTIVE'`, que `tenants_sem_data_publica` é zero, que os índices e a constraint de status estão presentes, e que a role da aplicação não tem `SUPERUSER` nem `BYPASSRLS`. Faça um smoke test controlado de login da aplicação, da console e leitura de Configurações > Agenda sem pausar ou arquivar um salão real durante a validação.
 
 Para conferir a distribuição dos estados sem exibir dados de clientes:
 

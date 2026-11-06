@@ -23,6 +23,7 @@ export class GetPublicTenantController {
         logoUrl: tenants.logoUrl,
         primaryColor: tenants.primaryColor,
         status: tenants.status,
+        publicBookingUntil: tenants.publicBookingUntil,
       })
       .from(tenants)
       .where(eq(tenants.slug, slug));
@@ -41,6 +42,7 @@ export class GetPublicTenantController {
         timezone: tenant.timezone,
         logoUrl: tenant.logoUrl,
         primaryColor: tenant.primaryColor,
+        publicBookingUntil: tenant.publicBookingUntil,
       },
     });
   }

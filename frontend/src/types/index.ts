@@ -1,36 +1,32 @@
 // ===== Domínio público (cliente) =====
 
 export interface TenantPublicData {
-    id: string;
-    name: string;
-    slug: string;
-    logoUrl?: string | null;
-    primaryColor?: string | null;
-    phone?: string | null;
-    timezone?: string | null;
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  phone?: string | null;
+  timezone?: string | null;
+  publicBookingUntil: string;
 }
 
 export interface Service {
-    id: string;
-    name: string;
-    description?: string | null;
-    durationMinutes: number;
-    price: string;
+  id: string;
+  name: string;
+  description?: string | null;
+  durationMinutes: number;
+  price: string;
 }
 
-export type AppointmentStatus =
-    | 'PENDENTE'
-    | 'CONFIRMADO'
-    | 'RECUSADO'
-    | 'CONCLUIDO'
-    | 'CANCELADO';
+export type AppointmentStatus = 'PENDENTE' | 'CONFIRMADO' | 'RECUSADO' | 'CONCLUIDO' | 'CANCELADO';
 
 export interface AppointmentSuccessResponse {
-    id: string;
-    status: 'PENDENTE' | 'CONFIRMADO';
-    startTime: string;
-    endTime: string;
-    expiresAt?: string | null;
+  id: string;
+  status: 'PENDENTE' | 'CONFIRMADO';
+  startTime: string;
+  endTime: string;
+  expiresAt?: string | null;
 }
 
 // ===== Domínio administrativo =====
@@ -38,178 +34,180 @@ export interface AppointmentSuccessResponse {
 export type Role = 'ADMIN' | 'PROFESSIONAL';
 
 export interface AuthUser {
-    id: string;
-    name: string;
-    email: string;
-    role: Role;
-    tenantId: string;
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  tenantId: string;
 }
 
 export interface LoginResponse {
-    token: string;
-    user: AuthUser;
+  token: string;
+  user: AuthUser;
 }
 
 // ===== Equipe (membros do tenant) =====
 
 export interface TeamMember {
-    id: string;
-    name: string;
-    email: string;
-    role: Role;
-    active: boolean;
-    createdAt: string;
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  active: boolean;
+  createdAt: string;
 }
 
 export interface CreateTeamMemberPayload {
-    name: string;
-    email: string;
-    password: string;
-    role: Role;
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
 }
 
 export interface UpdateTeamMemberPayload {
-    name?: string;
-    role?: Role;
-    active?: boolean;
-    password?: string;
+  name?: string;
+  role?: Role;
+  active?: boolean;
+  password?: string;
 }
 
 /** Payload usado no cadastro de um novo estabelecimento (provision).
  *  Cria um tenant + usuário ADMIN juntos no backend. */
 export interface ProvisionTenantPayload {
-    tenant: {
-        name: string;
-        slug: string;
-        phone: string;
-    };
-    admin: {
-        name: string;
-        email: string;
-        password: string;
-    };
+  tenant: {
+    name: string;
+    slug: string;
+    phone: string;
+  };
+  admin: {
+    name: string;
+    email: string;
+    password: string;
+  };
 }
 
 export interface ProvisionResponse {
-    token: string;
-    tenant: {
-        id: string;
-        name: string;
-        slug: string;
-    };
-    user: AuthUser;
+  token: string;
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  user: AuthUser;
 }
 
 export interface AppointmentUser {
-    id: string;
-    name: string;
-    phone: string;
+  id: string;
+  name: string;
+  phone: string;
 }
 
 /** Serviço no contexto administrativo (inclui flag de ativação). */
 export interface AdminService {
-    id: string;
-    name: string;
-    description?: string | null;
-    durationMinutes: number;
-    price: string;
-    active: boolean;
+  id: string;
+  name: string;
+  description?: string | null;
+  durationMinutes: number;
+  price: string;
+  active: boolean;
 }
 
 export interface AppointmentService {
-    id: string;
-    name: string;
-    durationMinutes: number;
-    price: string;
+  id: string;
+  name: string;
+  durationMinutes: number;
+  price: string;
 }
 
 /** Cliente vinculado ao tenant (contato da agenda). */
 export interface AdminCustomer {
-    id: string;
-    name: string;
-    phone: string;
-    createdAt: string;
+  id: string;
+  name: string;
+  phone: string;
+  createdAt: string;
 }
 
 export interface AppointmentProfessional {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 
 export interface AdminAppointment {
-    id: string;
-    status: AppointmentStatus;
-    startTime: string;
-    endTime: string;
-    expiresAt?: string | null;
-    customer: AppointmentUser;
-    service: AppointmentService;
-    professional?: AppointmentProfessional | null;
-    whatsappLink?: string;
+  id: string;
+  status: AppointmentStatus;
+  startTime: string;
+  endTime: string;
+  expiresAt?: string | null;
+  customer: AppointmentUser;
+  service: AppointmentService;
+  professional?: AppointmentProfessional | null;
+  whatsappLink?: string;
 }
 
 export type CreateServicePayload = {
-    name: string;
-    description?: string;
-    durationMinutes: number;
-    price: number;
+  name: string;
+  description?: string;
+  durationMinutes: number;
+  price: number;
 };
 
 export type UpdateServicePayload = {
-    name?: string;
-    description?: string | null;
-    durationMinutes?: number;
-    price?: number;
-    active?: boolean;
+  name?: string;
+  description?: string | null;
+  durationMinutes?: number;
+  price?: number;
+  active?: boolean;
 };
 
 // ===== Configurações do estabelecimento =====
 
 export interface TenantSettingsProfile {
-    id: string;
-    name: string;
-    slug: string;
-    phone: string;
-    timezone: string;
-    logoUrl?: string | null;
-    primaryColor?: string | null;
+  id: string;
+  name: string;
+  slug: string;
+  phone: string;
+  timezone: string;
+  publicBookingUntil: string;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
 }
 
 export interface ScheduleDay {
-    dayOfWeek: number; // 0 = Domingo ... 6 = Sábado
-    openTime: string; // "HH:MM"
-    closeTime: string; // "HH:MM"
-    isClosed: boolean;
+  dayOfWeek: number; // 0 = Domingo ... 6 = Sábado
+  openTime: string; // "HH:MM"
+  closeTime: string; // "HH:MM"
+  isClosed: boolean;
 }
 
 export interface TenantSettings {
-    tenant: TenantSettingsProfile;
-    schedule: ScheduleDay[];
+  tenant: TenantSettingsProfile;
+  schedule: ScheduleDay[];
 }
 
 // ===== Payloads de criação =====
 
 export interface CreateAppointmentPayload {
-    serviceId: string;
-    startTime: string; // ISO
-    customer: {
-        name: string;
-        phone: string;
-    };
+  serviceId: string;
+  startTime: string; // ISO
+  customer: {
+    name: string;
+    phone: string;
+  };
 }
 
 export interface PublicSlotsResponse {
-    date: string;
-    availableSlots: string[];
+  date: string;
+  availableSlots: string[];
 }
 
 interface AssistedAppointmentBasePayload {
-    serviceId: string;
-    startTime: string;
-    professionalId?: string;
+  serviceId: string;
+  startTime: string;
+  professionalId?: string;
 }
 
-export type CreateAssistedAppointmentPayload = AssistedAppointmentBasePayload & (
+export type CreateAssistedAppointmentPayload = AssistedAppointmentBasePayload &
+  (
     | { customerId: string; customer?: never }
     | { customer: { name: string; phone: string }; customerId?: never }
-);
+  );

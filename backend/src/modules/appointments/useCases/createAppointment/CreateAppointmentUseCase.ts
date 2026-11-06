@@ -9,7 +9,12 @@ import {
   users,
 } from '../../../../db/schema.js';
 import { AppError } from '../../../../shared/errors/AppError.js';
-import { utcToZoned, zonedToUtc } from '../../../../shared/utils/timezone.js';
+import {
+  addDaysToIsoDate,
+  todayInTimezone,
+  utcToZoned,
+  zonedToUtc,
+} from '../../../../shared/utils/timezone.js';
 
 interface IPublicRequest {
   slug: string;
@@ -38,6 +43,7 @@ interface ICreateRequest {
   customer: { id: string } | { name: string; phone: string };
   status: 'PENDENTE' | 'CONFIRMADO';
   professionalId: string | null;
+  enforcePublicWindow: boolean;
 }
 
 const SCHEDULE_TIME_PATTERN = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
@@ -79,6 +85,7 @@ export class CreateAppointmentUseCase {
       customer: { name: customerName, phone: customerPhone },
       status: 'PENDENTE',
       professionalId: null,
+      enforcePublicWindow: true,
     });
   }
 
@@ -109,6 +116,7 @@ export class CreateAppointmentUseCase {
       customer,
       status: 'CONFIRMADO',
       professionalId,
+      enforcePublicWindow: false,
     });
   }
 
@@ -119,10 +127,16 @@ export class CreateAppointmentUseCase {
     customer,
     status,
     professionalId,
+    enforcePublicWindow,
   }: ICreateRequest) {
     return withTenant(tenantId, async (tx) => {
       const [tenant] = await tx
-        .select({ id: tenants.id, timezone: tenants.timezone, status: tenants.status })
+        .select({
+          id: tenants.id,
+          timezone: tenants.timezone,
+          status: tenants.status,
+          publicBookingUntil: tenants.publicBookingUntil,
+        })
         .from(tenants)
         .where(eq(tenants.id, tenantId))
         .for('share');
@@ -156,17 +170,20 @@ export class CreateAppointmentUseCase {
           'MIN_ADVANCE_TIME',
         );
       }
-      const maxAllowedTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-      if (startTime > maxAllowedTime) {
+      const zonedStart = utcToZoned(startTime, tenant.timezone);
+      if (
+        enforcePublicWindow &&
+        (zonedStart.isoDate > tenant.publicBookingUntil ||
+          zonedStart.isoDate > addDaysToIsoDate(todayInTimezone(tenant.timezone, now), 90))
+      ) {
         throw new AppError(
-          'Agendamentos são permitidos apenas para os próximos 30 dias',
+          'Data fora do período de agendamento público permitido',
           400,
           'DATE_OUT_OF_RANGE',
         );
       }
 
       const endTime = new Date(startTime.getTime() + service.durationMinutes * 60 * 1000);
-      const zonedStart = utcToZoned(startTime, tenant.timezone);
       const [schedule] = await tx
         .select()
         .from(scheduleConfigs)

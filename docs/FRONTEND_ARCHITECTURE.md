@@ -127,7 +127,7 @@ module.exports = {
 | **2. Seleção de Serviços** | `/agendar/servicos` | Lista de `ServiceCard` ativos com duração, preço e seleção.
 
 |
-| **3. Seleção de Horário** | `/agendar/horario` | Carrossel horizontal de datas e grade `SlotPicker` com horários livres.
+| **3. Seleção de Horário** | `/agendar/horario` | Seletor paginado de oito datas, no timezone do tenant e limitado à data pública configurada, e grade de horários livres.
 
 |
 | **4. Dados do Cliente** | `/agendar/dados` | Inputs enxutos: Nome completo + Telefone com máscara `(XX) XXXXX-XXXX`.
@@ -166,6 +166,9 @@ module.exports = {
 
 |
 | └ _Aba 3: Horários_ | | Grade semanal de abertura/fechamento e dias fechados (`isClosed`).
+
+|
+| └ _Aba 4: Agenda_ | | `ADMIN` e `PROFESSIONAL` definem até que data, inclusive, o público pode reservar (hoje local a hoje +90 dias). Reduzir o limite não cancela reservas existentes.
 
 |
 

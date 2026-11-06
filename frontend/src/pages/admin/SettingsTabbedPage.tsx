@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, Palette, Clock, Save, Loader2 } from 'lucide-react';
+import { Building2, Palette, Clock, Save, Loader2, CalendarDays } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -8,12 +8,16 @@ import {
   fetchTenantSettings,
   updateTenantProfile,
   saveSchedule,
+  savePublicBookingUntil,
 } from '@/services/tenantSettings';
 import { ScheduleDay } from '@/types';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { cn } from '@/utils/cn';
+import { extractErrorMessage } from '@/services/api';
+import { addDaysToISODate } from '@/utils/format';
+import { DEFAULT_TZ, todayInTimeZone } from '@/utils/timezone';
 
 interface Tab {
   key: string;
@@ -25,17 +29,10 @@ const TABS: Tab[] = [
   { key: 'perfil', label: 'Perfil da Loja', icon: Building2 },
   { key: 'estetica', label: 'Estética & Tema', icon: Palette },
   { key: 'horarios', label: 'Horários', icon: Clock },
+  { key: 'agenda', label: 'Agenda', icon: CalendarDays },
 ];
 
-const WEEKDAYS = [
-  'Domingo',
-  'Segunda',
-  'Terça',
-  'Quarta',
-  'Quinta',
-  'Sexta',
-  'Sábado',
-];
+const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 const COLOR_PRESETS = ['#15803d', '#0ea5e9', '#7c3aed', '#db2777', '#ea580c', '#0f172a'];
 
@@ -56,19 +53,17 @@ export const SettingsTabbedPage: React.FC = () => {
         <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
           Preferências
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950">
-          Configurações
-        </h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-950">Configurações</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Personalize o perfil, a identidade visual e os horários de funcionamento
-          do seu estabelecimento.
+          Personalize o perfil, a identidade visual e os horários de funcionamento do seu
+          estabelecimento.
         </p>
       </header>
 
       {!isAdmin && (
         <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-          Você possui a função {user?.role}. Somente administradores podem editar
-          as configurações da loja.
+          Você possui a função {user?.role}. Perfil, identidade visual e horários são exclusivos de
+          ADMIN; ADMIN e PROFESSIONAL podem editar a abertura da agenda.
         </div>
       )}
 
@@ -81,7 +76,7 @@ export const SettingsTabbedPage: React.FC = () => {
               'inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition',
               active === key
                 ? 'bg-zinc-900 text-white'
-                : 'bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50'
+                : 'bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50',
             )}
           >
             <Icon className="size-4" />
@@ -91,31 +86,122 @@ export const SettingsTabbedPage: React.FC = () => {
       </div>
 
       {isLoading ? (
-        <p className="py-12 text-center text-sm text-zinc-400">
-          Carregando configurações...
-        </p>
+        <p className="py-12 text-center text-sm text-zinc-400">Carregando configurações...</p>
       ) : error || !data ? (
         <div className="mx-auto max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center">
-          <p className="text-sm text-zinc-600">
-            Não foi possível carregar as configurações.
-          </p>
+          <p className="text-sm text-zinc-600">Não foi possível carregar as configurações.</p>
           <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
             Tentar novamente
           </Button>
         </div>
       ) : (
         <>
-          {active === 'perfil' && (
-            <ProfileTab initial={data.tenant} isAdmin={isAdmin} />
-          )}
-          {active === 'estetica' && (
-            <ThemeTab initial={data.tenant} isAdmin={isAdmin} />
-          )}
-          {active === 'horarios' && (
-            <ScheduleTab initial={data.schedule} isAdmin={isAdmin} />
+          {active === 'perfil' && <ProfileTab initial={data.tenant} isAdmin={isAdmin} />}
+          {active === 'estetica' && <ThemeTab initial={data.tenant} isAdmin={isAdmin} />}
+          {active === 'horarios' && <ScheduleTab initial={data.schedule} isAdmin={isAdmin} />}
+          {active === 'agenda' && (
+            <BookingWindowTab
+              initial={data.tenant.publicBookingUntil}
+              timezone={data.tenant.timezone}
+            />
           )}
         </>
       )}
+    </div>
+  );
+};
+
+// ==== Janela de agendamento público ====
+
+const BookingWindowTab: React.FC<{ initial: string; timezone?: string | null }> = ({
+  initial,
+  timezone,
+}) => {
+  const queryClient = useQueryClient();
+  const tenantTimezone = timezone || DEFAULT_TZ;
+  const today = todayInTimeZone(tenantTimezone);
+  const latestDate = addDaysToISODate(today, 90);
+  const [publicBookingUntil, setPublicBookingUntil] = useState(initial);
+
+  React.useEffect(() => {
+    setPublicBookingUntil(initial);
+  }, [initial]);
+
+  const mutation = useMutation({
+    mutationFn: () => savePublicBookingUntil(publicBookingUntil),
+    onSuccess: (savedDate) => {
+      setPublicBookingUntil(savedDate);
+      void queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
+      void queryClient.invalidateQueries({ queryKey: ['tenant'] });
+      toast.success('Janela da agenda atualizada!');
+    },
+  });
+
+  const validationError =
+    publicBookingUntil < today
+      ? 'A data deve ser hoje ou posterior no fuso do estabelecimento.'
+      : publicBookingUntil > latestDate
+        ? 'A data não pode ultrapassar 90 dias a partir de hoje.'
+        : '';
+
+  return (
+    <div className="max-w-xl">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (validationError || !publicBookingUntil) return;
+          mutation.mutate();
+        }}
+        className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+      >
+        <label htmlFor="public-booking-until" className="block text-sm font-semibold text-zinc-800">
+          Agenda aberta até
+        </label>
+        <p id="public-booking-window-hint" className="mt-1 text-xs text-zinc-500">
+          Clientes poderão reservar até esta data, inclusive. O fuso considerado é {tenantTimezone}.
+        </p>
+        <input
+          id="public-booking-until"
+          type="date"
+          min={today}
+          max={latestDate}
+          value={publicBookingUntil}
+          aria-describedby="public-booking-window-hint public-booking-window-limits public-booking-window-error"
+          aria-invalid={Boolean(validationError)}
+          onChange={(event) => setPublicBookingUntil(event.target.value)}
+          className="mt-4 h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-400 sm:max-w-xs"
+        />
+        <p id="public-booking-window-limits" className="mt-2 text-[11px] text-zinc-400">
+          Limites: {today.split('-').reverse().join('/')} a{' '}
+          {latestDate.split('-').reverse().join('/')} (90 dias).
+        </p>
+        {validationError && (
+          <p id="public-booking-window-error" role="alert" className="mt-2 text-xs text-rose-600">
+            {validationError}
+          </p>
+        )}
+        {mutation.isError && (
+          <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            Não foi possível salvar a data: {extractErrorMessage(mutation.error)}
+          </p>
+        )}
+        <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+          Reduzir este limite não cancela reservas que já foram feitas.
+        </p>
+        <div className="mt-5 flex justify-end">
+          <Button
+            type="submit"
+            disabled={mutation.isPending || Boolean(validationError) || !publicBookingUntil}
+          >
+            {mutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {mutation.isPending ? 'Salvando…' : 'Salvar limite'}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };
@@ -171,8 +257,7 @@ const ProfileTab: React.FC<{
           />
         </div>
         <p className="mt-3 text-xs text-zinc-400">
-          Este nome e telefone aparecem no link público de agendamento da sua
-          loja.
+          Este nome e telefone aparecem no link público de agendamento da sua loja.
         </p>
         <div className="mt-5 flex items-center justify-end">
           <Button type="submit" disabled={!isAdmin || mutation.isPending}>
@@ -228,12 +313,8 @@ const ThemeTab: React.FC<{
         <div className="mb-4 flex items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
           <BrandMark color={primaryColor} small={false} />
           <div>
-            <p className="text-sm font-semibold text-zinc-800">
-              {initial.name || 'Sua loja'}
-            </p>
-            <p className="text-[11px] text-zinc-400">
-              Pré-visualização da marca no link público
-            </p>
+            <p className="text-sm font-semibold text-zinc-800">{initial.name || 'Sua loja'}</p>
+            <p className="text-[11px] text-zinc-400">Pré-visualização da marca no link público</p>
           </div>
         </div>
 
@@ -261,7 +342,7 @@ const ThemeTab: React.FC<{
               onClick={() => setPrimaryColor(preset)}
               className={cn(
                 'size-9 rounded-full border border-zinc-200 transition',
-                primaryColor === preset && 'ring-2 ring-zinc-900 ring-offset-2'
+                primaryColor === preset && 'ring-2 ring-zinc-900 ring-offset-2',
               )}
               style={{ backgroundColor: preset }}
               aria-label={`Usar cor ${preset}`}
@@ -332,7 +413,7 @@ const ScheduleTab: React.FC<{
           openTime,
           closeTime,
           isClosed,
-        }))
+        })),
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
@@ -340,14 +421,12 @@ const ScheduleTab: React.FC<{
     },
     onError: () =>
       toast.error(
-        'Não foi possível salvar os horários. Verifique se o horário de abertura é anterior ao de fechamento.'
+        'Não foi possível salvar os horários. Verifique se o horário de abertura é anterior ao de fechamento.',
       ),
   });
 
   const updateDay = (dayOfWeek: number, patch: Partial<ScheduleDraft>) => {
-    setDays((prev) =>
-      prev.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, ...patch } : d))
-    );
+    setDays((prev) => prev.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, ...patch } : d)));
   };
 
   return (
@@ -355,8 +434,8 @@ const ScheduleTab: React.FC<{
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <p className="text-xs text-zinc-500">
           Defina o horário de funcionamento de cada dia. Os{' '}
-          <span className="font-semibold text-zinc-700">dias fechados</span> não
-          exibirão horários disponíveis para o cliente.
+          <span className="font-semibold text-zinc-700">dias fechados</span> não exibirão horários
+          disponíveis para o cliente.
         </p>
 
         <div className="mt-4 space-y-3">
@@ -367,27 +446,25 @@ const ScheduleTab: React.FC<{
                 key={day.dayOfWeek}
                 className={cn(
                   'rounded-2xl border p-4 transition',
-                  day.isClosed ? 'border-zinc-100 bg-zinc-50' : 'border-zinc-200 bg-white'
+                  day.isClosed ? 'border-zinc-100 bg-zinc-50' : 'border-zinc-200 bg-white',
                 )}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-semibold text-zinc-800">
-                    {WEEKDAYS[day.dayOfWeek]}
-                  </span>
+                  <span className="font-semibold text-zinc-800">{WEEKDAYS[day.dayOfWeek]}</span>
                   <button
                     type="button"
                     disabled={!isAdmin}
                     onClick={() => updateDay(day.dayOfWeek, { isClosed: !day.isClosed })}
                     className={cn(
                       'relative inline-flex h-6 w-11 items-center rounded-full transition disabled:opacity-60',
-                      day.isClosed ? 'bg-zinc-200' : 'bg-emerald-500'
+                      day.isClosed ? 'bg-zinc-200' : 'bg-emerald-500',
                     )}
                     aria-pressed={!day.isClosed}
                   >
                     <span
                       className={cn(
                         'inline-block size-5 transform rounded-full bg-white shadow transition',
-                        day.isClosed ? 'translate-x-1' : 'translate-x-5'
+                        day.isClosed ? 'translate-x-1' : 'translate-x-5',
                       )}
                     />
                   </button>
@@ -405,9 +482,7 @@ const ScheduleTab: React.FC<{
                         type="time"
                         disabled={!isAdmin}
                         value={day.openTime}
-                        onChange={(e) =>
-                          updateDay(day.dayOfWeek, { openTime: e.target.value })
-                        }
+                        onChange={(e) => updateDay(day.dayOfWeek, { openTime: e.target.value })}
                         className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-zinc-400 disabled:opacity-60"
                       />
                     </label>
@@ -419,9 +494,7 @@ const ScheduleTab: React.FC<{
                         type="time"
                         disabled={!isAdmin}
                         value={day.closeTime}
-                        onChange={(e) =>
-                          updateDay(day.dayOfWeek, { closeTime: e.target.value })
-                        }
+                        onChange={(e) => updateDay(day.dayOfWeek, { closeTime: e.target.value })}
                         className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-zinc-400 disabled:opacity-60"
                       />
                     </label>
@@ -443,8 +516,8 @@ const ScheduleTab: React.FC<{
         </div>
       </div>
       <p className="mt-3 text-[11px] text-zinc-400">
-        Os slots são gerados a cada 30 minutos entre os horários de abertura e
-        fechamento, respeitando a duração de cada serviço.
+        Os slots são gerados a cada 30 minutos entre os horários de abertura e fechamento,
+        respeitando a duração de cada serviço.
       </p>
     </div>
   );

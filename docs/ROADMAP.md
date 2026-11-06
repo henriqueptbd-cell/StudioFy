@@ -39,7 +39,7 @@ Console da Plataforma (apos piloto controlado)
 - [x] Definir o armazenamento de agendamentos em UTC usando `TIMESTAMPTZ`; a API converte pelo timezone do tenant e o frontend exibe o horario local.
 - [x] Definir o intervalo base dos slots como 30 minutos.
 - [x] Definir que a duracao real do servico ocupa o intervalo completo, mesmo quando nao e multipla de 30 minutos.
-- [x] Definir antecedencia minima de 2 horas, limite de 30 dias corridos e inicio baseado em `open_time`.
+- [x] Definir antecedencia minima de 2 horas, abertura publica padrao de 30 dias (configuravel ate 90 dias) e inicio baseado em `open_time`.
 - [x] Definir que uma solicitacao `PENDENTE` bloqueia o horario.
 - [x] Definir expiracao automatica do `PENDENTE` em 12 horas ou 1 hora antes do inicio, o que ocorrer primeiro, transicionando para `CANCELADO`.
 - [x] Definir que o MVP usa somente os horarios globais do estabelecimento; disponibilidade individual fica para o pos-MVP.
@@ -51,7 +51,7 @@ Console da Plataforma (apos piloto controlado)
 
 - O tenant possui uma agenda unica. O cliente nunca escolhe profissional durante o agendamento.
 - O slot inicial avancara em blocos de 30 minutos, mas o conflito sera calculado por sobreposicao entre `start_time` e `end_time`.
-- A disponibilidade considera somente `schedule_configs`, agendamentos `PENDENTE` e `CONFIRMADO`, antecedencia minima e janela de 30 dias.
+- A disponibilidade publica considera `schedule_configs`, agendamentos `PENDENTE` e `CONFIRMADO`, antecedencia minima e a janela inclusiva configurada por tenant; ADMIN/PROFESSIONAL podem agendar assistidamente fora dela.
 
 ## FASE 1: Fundacao do projeto
 
@@ -120,7 +120,7 @@ Console da Plataforma (apos piloto controlado)
 - [x] Buscar dados publicos do tenant pelo slug.
 - [x] Listar servicos ativos do tenant.
 - [x] Consultar horarios disponiveis para uma data e um servico.
-- [x] Validar nome, telefone, servico, data, horario, limite de antecedencia e janela maxima de 30 dias.
+- [x] Validar nome, telefone, servico, data, horario, antecedencia minima e janela publica inclusiva configurada, com maximo de 90 dias.
 - [x] Criar solicitacao publica com status inicial `PENDENTE`.
 - [x] Fazer a criacao de forma atomica, rejeitando conflitos mesmo sob concorrencia (transacao + trigger com advisory lock; coberto por teste de concorrencia).
 - [x] Bloquear sobreposicoes com agendamentos `PENDENTE` ou `CONFIRMADO`, considerando a duracao real do servico.
@@ -181,13 +181,14 @@ Console da Plataforma (apos piloto controlado)
 - [x] Criar configuracao do tenant e horarios de funcionamento.
 - [x] Criar consulta de clientes vinculados ao tenant, sem expor dados de outros tenants.
 - [x] Permitir que ADMIN/PROFESSIONAL selecione cliente existente ou cadastre rapidamente um cliente e crie um agendamento assistido ja `CONFIRMADO`.
+- [x] Permitir que ADMIN/PROFESSIONAL configure a data inclusiva ate a qual o publico pode reservar; fluxo assistido nao usa esse limite.
 
 ## FASE 7: Testes e endurecimento
 
 > **Objetivo:** validar comportamento, seguranca e operacao antes do deploy.
 
-> **Status:** parcial. A suite Vitest tem 65 testes em 9 arquivos e cobre as permissões ADMIN/PROFESSIONAL,
-> agendamento assistido, conflitos concorrentes e as transições de status; o Playwright cobre o pedido público, confirmação e fluxo assistido.
+> **Status:** parcial. A suite Vitest tem 80 testes em 11 arquivos e cobre permissões ADMIN/PROFESSIONAL,
+> janela pública/assistida, conflitos concorrentes e transições de status; o Playwright cobre 3 cenários, incluindo abertura da agenda.
 > Ainda faltam expiração via endpoint, mobile e revisão de operação.
 
 - [x] Testar transições válidas de status para ADMIN/PROFESSIONAL e rejeitar transições inválidas.
@@ -252,21 +253,16 @@ Console da Plataforma (apos piloto controlado)
 - [x] Arquivar/restaurar é reversível, auditável e não executa hard delete.
 - [ ] Exclusao permanente, se aprovada, e sempre manual, explicita e auditada; nunca automatica.
 
-## Refinamentos de produto a especificar
+## Refinamentos de produto
 
-### Liberacao progressiva da agenda (ideia registrada; nao implementada)
+### Liberacao progressiva da agenda (implementada)
 
-O limite atual do backend e de 30 dias a frente; o seletor publico exibe somente 8
-datas consecutivas por vez. Ainda nao existe uma configuracao do salao para escolher
-ate que data futura a agenda fica aberta. Nao assumir que a reserva por seis meses ja
-seja permitida.
-
-- [ ] Definir a data padrao de liberacao, o horizonte maximo e se o salao podera ampliar esse limite em etapas (por exemplo, abrir o proximo mes).
-- [ ] Definir se ADMIN, PROFESSIONAL ou ambos podem alterar a data de liberacao.
-- [ ] Desenhar no painel o campo `Agenda aberta ate` com seletor de data; somente datas ate esse limite aparecem para reserva publica.
-- [ ] Persistir a data por salao e aplica-la no backend tanto na consulta de horarios quanto na criacao do agendamento; a interface nao e a unica protecao.
-- [ ] Definir semantica no fuso do salao e o que acontece se a data for reduzida depois de ja haver agendamentos futuros.
-- [ ] Cobrir limites de data, autorizacao e timezone nos testes antes de habilitar a configuracao.
+- [x] Abertura publica inicial ate hoje local +30 dias; ADMIN e PROFESSIONAL podem alterar a data inclusiva ate hoje local +90 dias.
+- [x] Aplicar o limite no backend para consulta e criacao publica; o seletor apresenta datas em paginas de oito ate o limite, no timezone IANA do tenant.
+- [x] Permitir consulta e criacao assistidas alem da janela publica, sem teto maximo adicional nesta versao; continuam valendo antecedencia minima, expediente e conflitos.
+- [x] Reduzir a data nao apaga nem cancela agendamentos ja existentes.
+- [x] Cobrir autorizacao, isolamento por tenant, validacao de datas, inclusividade e fluxo assistido nos 80 testes Vitest e 3 cenarios Playwright.
+- [x] Gerar a migration `0004_public_booking_until.sql`; aplicacao em producao fica sob responsabilidade do proprietario, conforme [guia de migration manual](./MIGRATION_GUIDE_SUPERADMIN.md).
 
 ## Backlog pos-MVP
 

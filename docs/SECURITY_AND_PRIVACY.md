@@ -108,7 +108,8 @@ estabelecimento, respeitando as regras de domínio.
 Pode consultar a agenda geral unificada, analisar solicitações, confirmar, recusar,
 cancelar ou concluir atendimentos conforme as regras do domínio.
 Não deve alterar identidade visual, outros usuários ou configurações administrativas
-sem autorização explícita.
+sem autorização explícita. A exceção deliberada é a data final da janela pública de
+agendamento, que ADMIN e PROFESSIONAL podem ajustar pelo endpoint dedicado.
 
 A interface pode ocultar ações sem permissão, mas a decisão final deve ocorrer no
 backend.
@@ -134,9 +135,12 @@ devem:
 - validar todos os parâmetros e payloads com Zod;
 - limitar requisições por IP e, quando possível, por tenant;
 - normalizar e validar telefone, data, horário e identificadores;
-- rejeitar datas fora da janela permitida;
+- rejeitar datas fora da janela pública inclusiva configurada para o tenant ou além do
+  horizonte máximo de hoje local +90 dias; a regra vale para consulta de slots e criação;
 - evitar mensagens que revelem dados internos;
 - impedir criação duplicada e tratar concorrência de forma atômica;
+- derivar o tenant das rotas autenticadas pelo JWT; o endpoint de slots assistidos não
+  aceita tenantId controlado pelo cliente e não aplica o limite público;
 - limitar o tamanho de textos recebidos;
 - registrar tentativas abusivas sem armazenar dados desnecessários.
 

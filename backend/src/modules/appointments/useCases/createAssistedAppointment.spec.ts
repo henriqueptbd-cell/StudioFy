@@ -293,7 +293,7 @@ describe('POST /api/v1/admin/appointments — agendamento assistido', () => {
     expect(response.body.error.code).toBe('SLOT_UNAVAILABLE');
   });
 
-  it('rejeita payload sem exatamente uma fonte de cliente e datas fora das regras', async () => {
+  it('rejeita payload inválido e horários fora das regras, mas permite agendamento assistido a seis meses', async () => {
     const missingCustomer = await postAsAdmin({ serviceId, startTime: atMinute(300) });
     const bothCustomerSources = await postAsAdmin({
       serviceId,
@@ -316,12 +316,12 @@ describe('POST /api/v1/admin/appointments — agendamento assistido', () => {
       })(),
       customer: { name: 'Fora Horário', phone: '11911115555' },
     });
-    const tooFarDate = new Date();
-    tooFarDate.setUTCDate(tooFarDate.getUTCDate() + 31);
-    tooFarDate.setUTCHours(14, 0, 0, 0);
-    const tooFar = await postAsAdmin({
+    const assistedDate = new Date();
+    assistedDate.setUTCDate(assistedDate.getUTCDate() + 180);
+    assistedDate.setUTCHours(14, 0, 0, 0);
+    const beyondPublicWindow = await postAsAdmin({
       serviceId,
-      startTime: tooFarDate.toISOString(),
+      startTime: assistedDate.toISOString(),
       customer: { name: 'Data Distante', phone: '11911117777' },
     });
     const inactiveService = await postAsAdmin({
@@ -335,8 +335,8 @@ describe('POST /api/v1/admin/appointments — agendamento assistido', () => {
     expect(tooSoon.body.error.code).toBe('MIN_ADVANCE_TIME');
     expect(outsideHours.status).toBe(400);
     expect(outsideHours.body.error.code).toBe('OUT_OF_BUSINESS_HOURS');
-    expect(tooFar.status).toBe(400);
-    expect(tooFar.body.error.code).toBe('DATE_OUT_OF_RANGE');
+    expect(beyondPublicWindow.status).toBe(201);
+    expect(beyondPublicWindow.body.data.status).toBe('CONFIRMADO');
     expect(inactiveService.status).toBe(404);
     expect(inactiveService.body.error.code).toBe('SERVICE_NOT_FOUND');
   });

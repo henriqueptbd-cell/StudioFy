@@ -27,6 +27,7 @@ npm run test --prefix backend -- src/modules/appointments/useCases/phase4Step3.s
 - `backend/src/shared/database/rlsAndConcurrency.spec.ts` — RLS e concorrência.
 - `backend/src/modules/appointments/useCases/phase4Step1And2.spec.ts` — API pública.
 - `backend/src/modules/appointments/useCases/phase4Step3.spec.ts` — criação/transições.
+- `backend/src/modules/appointments/useCases/bookingWindow.spec.ts` — janela pública, timezone, autorização e exceção assistida.
 - `backend/src/db/isolation-test.ts` — verificação de isolamento entre tenants.
 - `backend/src/modules/auth/useCases/login/loginAndProvision.spec.ts` — login e
   provisionamento (conforme `docs/TESTING.md`).

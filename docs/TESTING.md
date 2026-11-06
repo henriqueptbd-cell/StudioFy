@@ -49,9 +49,9 @@ npm run test --prefix backend -- src/modules/auth/useCases/login/loginAndProvisi
 
 ## Suíte atual
 
-**A suíte validada contém 10 arquivos Vitest e 73 testes aprovados**, além de **2 cenários E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento público e assistido, conversão de fuso horário, concorrência, isolamento RLS entre tenants e a console da plataforma. A integração verifica que `PROFESSIONAL` pode consultar recursos permitidos e executar transições válidas, mas recebe 403 ao tentar alterar serviços, equipe ou configurações. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
+**A suíte validada contém 11 arquivos Vitest e 80 testes aprovados**, além de **3 cenários E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento público e assistido, janela progressiva, conversão de fuso horário, concorrência, isolamento RLS entre tenants e a console da plataforma. A integração verifica que `PROFESSIONAL` pode consultar recursos permitidos, executar transições válidas e editar a abertura da agenda pública, mas recebe 403 ao tentar alterar serviços, equipe, perfil ou horários. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
 
-O cenário `e2e/booking-flow.spec.ts` valida, pelo navegador, solicitação pública, status `PENDENTE`, login administrativo, confirmação e persistência após recarregar a agenda; em seguida, seleciona o mesmo cliente existente no modal assistido e cria um segundo agendamento já `CONFIRMADO`. O segundo cenário autentica um superadmin provisionado pelo comando privado de bootstrap, localiza o tenant e pausa/reativa a conta pela console. O setup usa somente banco PostgreSQL loopback terminado em `_test` ou `_e2e`; não use produção nem banco compartilhado.
+Os cenários de `e2e/booking-flow.spec.ts` validam, pelo navegador: solicitação pública e confirmação; abertura pública inclusiva, bloqueio após o limite e agendamento assistido além da janela; login superadmin e pausa/reativação com motivo. O setup usa somente banco PostgreSQL loopback terminado em `_test` ou `_e2e`; não use produção nem banco compartilhado.
 
 ### Console da Plataforma (Fase 9)
 
@@ -88,7 +88,9 @@ Os testes abaixo ja foram executados com sucesso na role restrita da aplicacao:
 - [x] Listar somente servicos ativos.
 - [x] Calcular slots respeitando funcionamento, duracao e antecedencia.
 - [x] Criar agendamento publico com status `PENDENTE`.
-- [x] Rejeitar agendamento para data alem da janela de 30 dias.
+- [x] Rejeitar agendamento público para data além da janela inclusiva configurada pelo tenant.
+- [x] Aplicar a janela pública configurável e inclusiva (default +30 dias; máximo +90 dias), validada em slots e criação.
+- [x] Permitir consulta/criação assistida além da janela pública, preservando antecedência, expediente e conflito.
 - [x] Validar o expediente configurado do estabelecimento na criacao.
 - [x] Rejeitar agendamento duplicado no mesmo slot.
 - [x] Confirmar agendamento: `PENDENTE` -> `CONFIRMADO`.
@@ -111,6 +113,16 @@ fluxo de criacao e transicao inicial do agendamento:
 - rejeicao de solicitacao duplicada no mesmo slot;
 - confirmacao administrativa para `CONFIRMADO`;
 - rejeicao de transicao invalida para `RECUSADO`.
+
+### Janela progressiva de agendamento
+
+`backend/src/modules/appointments/useCases/bookingWindow.spec.ts` cobre:
+
+- valor inicial de 30 dias e atualização da janela por `ADMIN` e `PROFESSIONAL`;
+- datas inválidas, anteriores a hoje ou superiores a 90 dias, autorização e isolamento;
+- limite inclusivo em slots e criação pública e erro `DATE_OUT_OF_RANGE` após o limite;
+- slots e criação assistidos além da janela, ainda sujeitos a antecedência, expediente e conflitos;
+- redução da janela sem cancelamento nem exclusão de reservas existentes.
 
 ### Gestao de equipe (Fase 6)
 

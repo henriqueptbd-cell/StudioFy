@@ -26,7 +26,7 @@ administrativas no mesmo arquivo. Os caminhos HTTP continuam sob `/api/v1`.
 - O JWT informa `tenantId` e `role`; o backend estabelece o contexto RLS antes das operações no banco.
 - `ADMIN` pode gerenciar serviços, equipe e configurações, além de operar a agenda.
 - `ADMIN` e `PROFESSIONAL` podem consultar a agenda e alterar status de agendamentos, sempre respeitando a máquina de estados e o tenant autenticado.
-- `PROFESSIONAL` tem acesso de leitura a serviços, clientes, equipe e configurações; alterações de serviços, equipe e configurações são exclusivas de `ADMIN`.
+- `PROFESSIONAL` tem acesso de leitura a serviços, clientes, equipe e configurações; alterações de serviços, equipe, perfil e horários são exclusivas de `ADMIN`. `ADMIN` e `PROFESSIONAL` podem alterar a data-limite de reservas públicas.
 - Erros seguem `{ success: false, error: { code, message } }`.
 
 ---
@@ -117,7 +117,9 @@ Retorna as informações públicas e identidade visual do estabelecimento.
     "slug": "studio-beleza",
     "logoUrl": "https://...",
     "primaryColor": "#FF5733",
-    "phone": "11999999999"
+    "phone": "11999999999",
+    "timezone": "America/Sao_Paulo",
+    "publicBookingUntil": "2026-09-30"
   }
 }
 ```
@@ -163,6 +165,11 @@ Retorna os horários disponíveis para agendamento em um determinado dia.
 }
 ```
 
+O limite de `publicBookingUntil` é inclusivo e usa a data-calendário do timezone do tenant.
+Datas posteriores retornam `400 DATE_OUT_OF_RANGE`; a consulta pública e a criação pública
+aplicam o mesmo limite. O backend também impede que a API pública consulte ou grave datas
+além de hoje local +90 dias, mesmo que o estado do banco seja alterado por fora da API.
+
 ### 2.4 `POST /api/v1/public/tenants/:slug/appointments`
 
 Cria uma nova solicitação de agendamento.
@@ -197,6 +204,8 @@ Cria uma nova solicitação de agendamento.
 
 - **Erro de conflito (409):** `SLOT_UNAVAILABLE` se outra requisição ocupar o horário
   após a checagem de disponibilidade e antes da gravação.
+- **Erro de janela (400):** `DATE_OUT_OF_RANGE` se a data exceder `publicBookingUntil`
+  ou o horizonte máximo de hoje local +90 dias.
 
 ---
 
@@ -254,8 +263,9 @@ em contato por telefone ou presencialmente.
   profissional. `ADMIN` pode atribuir um membro `PROFESSIONAL` ativo do próprio tenant
   ou deixar o agendamento sem atribuição.
 - **Regras:** serviço ativo, cliente/profissional do tenant autenticado, antecedência
-  mínima de 2 horas, máximo de 30 dias, expediente local do tenant e ausência de
-  sobreposição com solicitações `PENDENTE` ou agendamentos `CONFIRMADO`. Conflitos são
+  mínima de 2 horas, expediente local do tenant e ausência de sobreposição com
+  solicitações `PENDENTE` ou agendamentos `CONFIRMADO`. O fluxo assistido não aplica a
+  janela pública e não possui horizonte máximo de dias nesta versão. Conflitos são
   verificados novamente na gravação; se outra requisição ocupar o slot no mesmo
   instante, a proteção transacional do banco retorna `SLOT_UNAVAILABLE`.
 - **Response (201 Created):** agendamento com `status: "CONFIRMADO"` e
@@ -273,6 +283,42 @@ em contato por telefone ou presencialmente.
 
 Para um cliente novo, envie `customer: { "name": "Ana Souza", "phone": "11988887777" }`
 no lugar de `customerId`. Dados do cliente e agendamento são gravados na mesma operação.
+
+### `GET /api/v1/admin/appointments/available-slots?date=YYYY-MM-DD&serviceId=UUID`
+
+Consulta horários para o fluxo de agendamento assistido.
+
+- **Acesso:** `ADMIN` e `PROFESSIONAL`.
+- **Tenant:** derivado exclusivamente do JWT; nenhum `tenantId` é necessário ou usado na query.
+- **Regras:** respeita expediente, antecedência mínima de 2 horas e conflitos; não aplica a
+  data-limite pública. A criação do agendamento revalida as regras no backend.
+- **Response (200 OK):** `{ "success": true, "data": { "date": "2026-09-10", "availableSlots": ["09:00", "09:30"] } }`.
+
+### Configuração da janela pública
+
+#### `GET /api/v1/admin/settings`
+
+Retorna `data.tenant` e `data.schedule`. O perfil do tenant inclui
+`publicBookingUntil` como `YYYY-MM-DD` no timezone IANA do estabelecimento.
+`ADMIN` e `PROFESSIONAL` podem consultar.
+
+#### `PUT /api/v1/admin/settings/booking-window`
+
+Atualiza a última data que clientes podem reservar. O body é estrito:
+
+```json
+{ "publicBookingUntil": "2026-12-31" }
+```
+
+- **Acesso:** `ADMIN` e `PROFESSIONAL`.
+- **Validação:** data ISO real entre hoje local e hoje local +90 dias, inclusive.
+  O backend resolve timezone e tenant pela identidade autenticada; `tenantId` extra é
+  rejeitado e a request não pode escolher outro estabelecimento.
+- **Efeito de reduzir:** não apaga, cancela nem altera reservas existentes; somente
+  consultas e novas reservas públicas passam a respeitar a data atualizada.
+- **Response:** `{ "success": true, "data": { "publicBookingUntil": "2026-12-31" } }`.
+- **Erro:** `400 DATE_OUT_OF_RANGE` para datas fora do intervalo e `400 VALIDATION_ERROR`
+  para body/data inválidos.
 
 ### 3.2 `PATCH /api/v1/admin/appointments/:id/status`
 

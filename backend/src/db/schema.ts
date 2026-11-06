@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -26,6 +27,9 @@ export const tenants = pgTable(
     slug: varchar('slug', { length: 100 }).notNull().unique(),
     phone: varchar('phone', { length: 20 }).notNull(),
     timezone: varchar('timezone', { length: 64 }).notNull().default('America/Sao_Paulo'),
+    publicBookingUntil: date('public_booking_until', { mode: 'string' })
+      .notNull()
+      .default(sql`CURRENT_DATE + 30`),
     logoUrl: text('logo_url'),
     primaryColor: varchar('primary_color', { length: 7 }).notNull().default('#000000'),
     status: varchar('status', { length: 20 }).$type<TenantStatus>().notNull().default('ACTIVE'),

@@ -26,6 +26,7 @@ erDiagram
         string slug UK
         string phone
         string timezone
+        date public_booking_until
         string logo_url
         string primary_color
         timestamp created_at
@@ -119,3 +120,18 @@ stateDiagram-v2
 - **Regra de Isolamento:**
 
 $$\text{Acesso Autorizado} \iff \text{linha.tenant\_id} = \text{current\_setting('app.current\_tenant\_id')}$$
+
+### `tenants.public_booking_until`
+
+- Tipo PostgreSQL `DATE`, não nulo, no formato ISO `YYYY-MM-DD`.
+- Representa a última data-calendário, inclusive, em que o cliente pode iniciar um
+  agendamento público; a comparação é feita no timezone IANA do tenant.
+- A migration `0004_public_booking_until.sql` preenche tenants existentes com hoje local
+  +30 dias. O provisionamento da aplicação também define explicitamente esse valor para
+  novos tenants. O default SQL é `CURRENT_DATE + 30`; o código de provisionamento usa a
+  data local do estabelecimento para não depender do timezone do servidor.
+- A API permite que ADMIN ou PROFESSIONAL configurem entre hoje local e hoje local +90
+  dias. Slots e criação públicos validam a coluna no backend; a interface não é a única
+  barreira.
+- O agendamento assistido não aplica esse limite e ainda respeita antecedência mínima,
+  expediente e conflitos. Reduzir a janela não altera reservas já existentes.

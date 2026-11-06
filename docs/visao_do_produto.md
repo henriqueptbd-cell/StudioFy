@@ -244,6 +244,19 @@ CONFIRMADO
 Comunicação via WhatsApp
 ```
 
+### Janela pública da agenda
+
+A abertura pública começa, por padrão, até hoje local +30 dias. ADMIN e PROFESSIONAL
+podem ajustar a data inclusiva em Configurações > Agenda, entre hoje no timezone do
+estabelecimento e hoje +90 dias. O seletor público navega em grupos de oito datas, sem
+exibir ou aceitar datas após o limite. O backend valida tanto a consulta de horários
+quanto a criação; esconder uma data na interface não substitui essa validação.
+
+O agendamento assistido feito pela equipe pode ocorrer além da janela pública, inclusive
+para seis meses ou mais; nesta versão não há horizonte máximo adicional para esse fluxo.
+Ainda deve respeitar antecedência mínima de duas horas, expediente e ausência de conflito.
+Reduzir a janela não cancela nem altera agendamentos existentes.
+
 ### Agendamento assistido pela equipe
 
 ADMIN e PROFESSIONAL também podem registrar um agendamento em nome de uma cliente que
@@ -364,12 +377,12 @@ estabelecimento.
 
 A autenticação será necessária para profissionais e administradores, enquanto o cliente final não terá autenticação obrigatória no MVP.
 
-A modelagem deverá considerar o estabelecimento como uma entidade central, permitindo isolamento dos dados entre diferentes estabelecimentos.
-
-Antes da implementação, ainda precisam ser definidas as regras de fuso horário,
-intervalo dos slots, antecedência mínima, limite de dias futuros, bloqueio de
-solicitações pendentes e prevenção de conflitos concorrentes. Essas decisões são
-pré-requisitos da Fase 0 do roadmap.
+A modelagem considera o estabelecimento como entidade central, com isolamento dos dados
+entre estabelecimentos. As regras de timezone IANA, slots de 30 minutos, antecedência
+mínima, janela pública inclusiva, bloqueio de solicitações pendentes e prevenção de
+conflitos concorrentes estão definidas no roadmap e implementadas na API. O deploy da
+migration `0004_public_booking_until.sql` no banco real ainda deve ser feito pelo
+responsável pelo ambiente, conforme o guia manual.
 
 ---
 

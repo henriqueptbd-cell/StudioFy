@@ -12,7 +12,9 @@ type BookingFixture = {
   slug: string;
   adminEmail: string;
   adminPassword: string;
+  adminToken: string;
   serviceName: string;
+  serviceId: string;
   platformEmail: string;
   platformPassword: string;
 };
@@ -46,6 +48,10 @@ function tenantDate(daysAhead: number): string {
   const value = (type: string) => Number(parts.find((part) => part.type === type)?.value);
   const date = new Date(Date.UTC(value('year'), value('month') - 1, value('day') + daysAhead));
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function tenantDateTime(date: string, hour: number): string {
+  return new Date(`${date}T${String(hour).padStart(2, '0')}:00:00-03:00`).toISOString();
 }
 
 async function expectStatus(
@@ -112,6 +118,7 @@ test.beforeAll(async () => {
     },
   });
   await expectStatus(serviceResponse, 201, 'Criação do serviço de teste');
+  const service = (await serviceResponse.json()) as ApiEnvelope<{ id: string }>;
 
   const scheduleResponse = await api.put('/api/v1/admin/settings/schedule', {
     headers: authorization,
@@ -130,7 +137,9 @@ test.beforeAll(async () => {
     slug: provision.data.tenant.slug,
     adminEmail,
     adminPassword,
+    adminToken: provision.data.token,
     serviceName,
+    serviceId: service.data.id,
     platformEmail: `platform-${runId}@studiofy.test`,
     platformPassword: `E2E-${runId}-Platform-Strong!`,
   };
@@ -164,6 +173,12 @@ test('cliente solicita e equipe confirma; painel também agenda para cliente exi
   await page.getByRole('button', { name: new RegExp(fixture.serviceName) }).click();
   await page.getByRole('link', { name: 'Continuar' }).click();
 
+  await page.getByRole('button', { name: 'Mostrar próximos 8 dias' }).click();
+  const firstDateOnNextPage = Number(tenantDate(8).slice(8, 10));
+  await expect(
+    page.getByRole('button', { name: new RegExp(`${firstDateOnNextPage} de`) }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Mostrar 8 dias anteriores' }).click();
   await page.getByRole('button', { name: /Amanhã/ }).click();
   const availableSlot = page.getByRole('button', { name: /^\d{2}:\d{2}$/ }).first();
   await expect(availableSlot).toBeVisible();
@@ -224,6 +239,93 @@ test('cliente solicita e equipe confirma; painel também agenda para cliente exi
     .last()
     .locator('xpath=../../../..');
   await expect(assistedAppointmentCard.getByText('CONFIRMADO', { exact: true })).toBeVisible();
+});
+
+test('janela configurada bloqueia booking público após o limite e mantém fluxo assistido fora dele', async ({
+  page,
+}) => {
+  if (!api) throw new Error('API E2E não inicializada.');
+  const authorization = { Authorization: `Bearer ${fixture.adminToken}` };
+  const publicBookingUntil = tenantDate(1);
+  const outsideWindowDate = tenantDate(2);
+  const customerName = `Cliente Janela E2E ${randomUUID().slice(0, 8)}`;
+  let restoreWindow = false;
+
+  try {
+    restoreWindow = true;
+    const update = await api.put('/api/v1/admin/settings/booking-window', {
+      headers: authorization,
+      data: { publicBookingUntil },
+    });
+    expect(update.status()).toBe(200);
+    const settingsResponse = await api.get('/api/v1/admin/settings', { headers: authorization });
+    expect(settingsResponse.status()).toBe(200);
+    expect((await settingsResponse.json()).data.tenant.publicBookingUntil).toBe(publicBookingUntil);
+
+    const inclusiveBooking = await api.post(`/api/v1/public/tenants/${fixture.slug}/appointments`, {
+      data: {
+        serviceId: fixture.serviceId,
+        startTime: tenantDateTime(publicBookingUntil, 11),
+        customer: { name: customerName, phone: '11987651234' },
+      },
+    });
+    expect(inclusiveBooking.status()).toBe(201);
+
+    const publicSlotsOutsideWindow = await api.get(
+      `/api/v1/public/tenants/${fixture.slug}/slots?date=${outsideWindowDate}&serviceId=${fixture.serviceId}`,
+    );
+    expect(publicSlotsOutsideWindow.status()).toBe(400);
+    expect((await publicSlotsOutsideWindow.json()).error.code).toBe('DATE_OUT_OF_RANGE');
+
+    const publicBookingOutsideWindow = await api.post(
+      `/api/v1/public/tenants/${fixture.slug}/appointments`,
+      {
+        data: {
+          serviceId: fixture.serviceId,
+          startTime: tenantDateTime(outsideWindowDate, 11),
+          customer: { name: `${customerName} fora`, phone: '11987651235' },
+        },
+      },
+    );
+    expect(publicBookingOutsideWindow.status()).toBe(400);
+    expect((await publicBookingOutsideWindow.json()).error.code).toBe('DATE_OUT_OF_RANGE');
+
+    await page.goto('/admin/login');
+    await page.getByRole('textbox', { name: 'Slug do estabelecimento' }).fill(fixture.slug);
+    await page.getByRole('textbox', { name: 'E-mail' }).fill(fixture.adminEmail);
+    await page.getByLabel('Senha').fill(fixture.adminPassword);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page).toHaveURL(/\/admin\/dashboard$/);
+    await page.goto('/admin/agendamentos');
+    await page.getByRole('button', { name: 'Novo agendamento' }).click();
+
+    const assistedDialog = page.getByRole('dialog', { name: 'Novo agendamento' });
+    await expect(assistedDialog).toBeVisible();
+    await assistedDialog
+      .getByRole('textbox', { name: 'Buscar por nome ou telefone' })
+      .fill(customerName);
+    const customer = assistedDialog.getByRole('button', { name: new RegExp(customerName) });
+    await expect(customer).toBeVisible();
+    await customer.click();
+    await assistedDialog.getByLabel('Serviço ativo').selectOption({
+      label: `${fixture.serviceName} · 30 min`,
+    });
+    await assistedDialog.getByLabel('Data do atendimento').fill(outsideWindowDate);
+    const assistedSlot = assistedDialog.getByRole('button', { name: /^\d{2}:\d{2}$/ }).first();
+    await expect(assistedSlot).toBeVisible();
+    await assistedSlot.click();
+    await assistedDialog.getByRole('button', { name: 'Confirmar agendamento' }).click();
+    await expect(assistedDialog).toBeHidden();
+    await expect(page.getByText('Agendamento criado e confirmado.', { exact: true })).toBeVisible();
+  } finally {
+    if (restoreWindow) {
+      const restore = await api.put('/api/v1/admin/settings/booking-window', {
+        headers: authorization,
+        data: { publicBookingUntil: tenantDate(30) },
+      });
+      expect(restore.status()).toBe(200);
+    }
+  }
 });
 
 test('superadmin entra na console e pausa/reativa um tenant com motivo', async ({ page }) => {

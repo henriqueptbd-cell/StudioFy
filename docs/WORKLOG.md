@@ -5,6 +5,17 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-06 — Liberação progressiva da agenda
+
+- **Status:** Concluído e validado localmente.
+- **Pedido:** Seguir a recomendação aprovada para que ADMIN e PROFESSIONAL controlem até que data a agenda pública fica disponível, mantendo o agendamento assistido fora desse limite.
+- **Contexto:** O backend limitava o público a 30 dias fixos e o seletor oferecia somente oito datas; não havia configuração por salão.
+- **Decisão:** Persistir data-calendário inclusiva por tenant, iniciar em hoje local +30 dias e permitir ajuste por ADMIN/PROFESSIONAL até hoje local +90 dias. A API valida slots e novas reservas públicas. A equipe pode consultar e agendar fora da janela pública, inclusive para seis meses ou mais; nesta versão não existe horizonte máximo adicional para fluxo assistido. Reduzir a data não apaga nem cancela reservas existentes.
+- **Mudanças:** Schema `tenants.public_booking_until`, migration versionada `0004_public_booking_until.sql`, provisionamento local, endpoint autenticado de atualização, endpoint de slots assistidos, validações públicas em consulta/criação, aba Agenda nas configurações, paginação pública de oito datas, testes e documentação. Atualizado também o teste legado que ainda impunha 30 dias ao fluxo assistido.
+- **Validação:** `npm test`: 11 arquivos/80 testes aprovados; `npm run test:e2e`: 3 cenários aprovados, incluindo paginação, limite público, exceção assistida e Console Superadmin; `npm run lint`: 0 erros e 2 avisos preexistentes de Fast Refresh; `npm run build`: aprovado (aviso de bundle frontend acima de 500 kB); `npx drizzle-kit check`, Prettier nos arquivos alterados e `git diff --check` aprovados. Migration aplicada somente em `studiofy_e2e`.
+- **Auditoria:** Revisão independente confirmou isolamento, uso de RLS, serialização de atualização/criação, timezone e migration. A recomendação original aceita não definiu teto de dias para o fluxo assistido; seis meses era o cenário que a janela pública deveria deixar de expor. Mantido o comportamento aprovado, documentado como sem máximo interno nesta versão.
+- **Pendências:** Aplicar manualmente as migrations pendentes `0003` e `0004` no banco real após backup, seguindo [guia de migration manual](./MIGRATION_GUIDE_SUPERADMIN.md); nenhuma operação foi feita em produção.
+
 ## 2026-11-05 — Conferência dos módulos e da migration Superadmin
 
 - **Status:** Bloqueado; migration online não concluída por falta de permissão.

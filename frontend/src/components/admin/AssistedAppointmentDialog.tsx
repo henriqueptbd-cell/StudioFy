@@ -6,31 +6,20 @@ import { Input } from '@/components/ui/Input';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { createAssistedAppointment, fetchPublicSlots } from '@/services/appointments';
+import { createAssistedAppointment, fetchAdminAvailableSlots } from '@/services/appointments';
 import { fetchAdminCustomers } from '@/services/customers';
 import { fetchTeamMembers } from '@/services/team';
 import { fetchAdminServices } from '@/services/tenantServices';
 import { fetchTenantSettings } from '@/services/tenantSettings';
 import { AdminCustomer, TeamMember } from '@/types';
 import { extractErrorMessage } from '@/services/api';
-import { DEFAULT_TZ, zonedToUtcIso } from '@/utils/timezone';
+import { DEFAULT_TZ, todayInTimeZone, zonedToUtcIso } from '@/utils/timezone';
 
 interface AssistedAppointmentDialogProps {
   onClose: () => void;
 }
 
 type CustomerMode = 'existing' | 'new';
-
-function todayInTimeZone(timeZone: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -109,15 +98,14 @@ export const AssistedAppointmentDialog: React.FC<AssistedAppointmentDialogProps>
   });
   const professionals = team.filter((member) => member.active && member.role === 'PROFESSIONAL');
   const timezone = settings?.tenant.timezone || DEFAULT_TZ;
-  const slug = settings?.tenant.slug || '';
   const {
     data: slotsData,
     isLoading: slotsLoading,
     error: slotsError,
   } = useQuery({
-    queryKey: ['assisted-appointment-slots', slug, date, serviceId],
-    queryFn: () => fetchPublicSlots(slug, date, serviceId),
-    enabled: Boolean(slug && date && serviceId),
+    queryKey: ['assisted-appointment-slots', user?.tenantId, date, serviceId],
+    queryFn: () => fetchAdminAvailableSlots(date, serviceId),
+    enabled: Boolean(user?.tenantId && date && serviceId),
     staleTime: 30_000,
   });
 
@@ -162,7 +150,7 @@ export const AssistedAppointmentDialog: React.FC<AssistedAppointmentDialogProps>
     onError: (error: unknown) => {
       if (isConflictError(error)) {
         void queryClient.invalidateQueries({
-          queryKey: ['assisted-appointment-slots', slug, date, serviceId],
+          queryKey: ['assisted-appointment-slots', user?.tenantId, date, serviceId],
         });
       }
       setSaveError(
