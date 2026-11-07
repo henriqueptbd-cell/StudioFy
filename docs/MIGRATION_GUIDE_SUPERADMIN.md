@@ -18,34 +18,33 @@ Este procedimento prepara as migrations da Console da Plataforma e da janela pro
 - define um default SQL de `CURRENT_DATE + 30`; o provisionamento da aplicação calcula
   explicitamente hoje +30 no timezone do novo tenant.
 
-O comando de aplicação também reaplica `database/rls.sql` e `database/constraints.sql`. Esses scripts são idempotentes para a configuração esperada do StudioFy; o segundo recria os triggers de integridade e o trigger append-only da auditoria. Não rode `npm run db:migrate` para esta etapa, pois esse script também executa `drizzle-kit generate` e pode gerar arquivos novos localmente. Use `db:rls`, que aplica todas as migrations versionadas ainda pendentes e as políticas/constraints.
+O comando de aplicação também reaplica `database/rls.sql` e `database/constraints.sql`. Esses scripts são idempotentes para a configuração esperada do StudioFy; o segundo recria os triggers de integridade e o trigger append-only da auditoria. Não rode `npm run db:migrate` para esta etapa, pois esse script também executa `drizzle-kit generate` e pode gerar arquivos novos localmente. O comando manual recomendado é `npm run db:apply:checked`: ele lê `.env` da raiz ou de `backend/`, testa permissões sem alteração e só então chama o runner `db:rls` existente.
 
 ## Antes de começar
 
 1. Faça e valide um backup/snapshot restaurável do banco real. Execute em uma janela de mudança e tenha acesso à pessoa responsável pelo PostgreSQL.
-2. Confirme que o release contém `0003_familiar_shockwave.sql`, `0003_snapshot.json`, `0004_public_booking_until.sql`, `0004_snapshot.json` e o journal Drizzle atualizado. Se `0003` já foi aplicado em uma implantação anterior, `db:rls` aplicará somente `0004`; se ainda estiver pendente, aplicará ambas em ordem. Não edite o SQL versionado nem gere migration no servidor.
+2. Confirme que o checkout contém o helper `db:apply:checked` e os arquivos `0003_familiar_shockwave.sql`, `0003_snapshot.json`, `0004_public_booking_until.sql`, `0004_snapshot.json` e o journal Drizzle atualizado. Se `0003` já foi aplicado em uma implantação anterior, o helper aplicará somente `0004`; se ainda estiver pendente, aplicará ambas em ordem. Não edite o SQL versionado nem gere migration no servidor.
 3. Confirme host e nome do banco sem imprimir a URL completa ou credenciais. Verifique o histórico Drizzle em `drizzle.__drizzle_migrations`; a migration nova deve aparecer somente depois da aplicação. Se o histórico real divergir dos arquivos `backend/drizzle/meta/_journal.json`, pare e reconcilie o estado com a pessoa responsável pelo banco antes de continuar.
-4. Use uma URL de migração (`MIGRATION_DATABASE_URL`) com privilégio suficiente para criar/alterar tabelas e constraints. A URL da aplicação (`DATABASE_URL`) deve continuar usando a role restrita, sem `SUPERUSER` e sem `BYPASSRLS`. Não conceda `BYPASSRLS` à role da aplicação.
+4. Prefira uma URL de migração (`MIGRATION_DATABASE_URL`) com ownership/privilégios suficientes para criar/alterar tabelas e constraints. A URL da aplicação (`DATABASE_URL`) deve continuar usando a role restrita, sem `SUPERUSER` e sem `BYPASSRLS`. Não conceda `BYPASSRLS` à role da aplicação. Se só houver `DATABASE_URL`, o helper tenta primeiro uma checagem somente de leitura; ele aborta antes de migrar se a role não tiver permissões. O helper não concede nem contorna privilégios.
 5. Defina `PLATFORM_JWT_SECRET` com um segredo aleatório forte de pelo menos 32 caracteres, diferente de `JWT_SECRET`, e mantenha `PLATFORM_JWT_EXPIRES_IN=15m`. Configure esses valores no gerenciador de segredos do ambiente, sem commitá-los, copiá-los para tickets ou mostrá-los em logs.
 
 ## Aplicar migration e políticas
 
-No diretório raiz do checkout/release que contém os arquivos versionados, configure as variáveis no gerenciador de segredos ou no ambiente seguro do processo:
+O helper carrega `backend/.env` e, como fallback, `.env` na raiz; variáveis já exportadas no processo têm prioridade. Para a etapa de migration, basta uma das URLs abaixo:
 
-- `DATABASE_URL`: conexão da aplicação restrita para o banco de produção;
-- `MIGRATION_DATABASE_URL`: conexão temporária de migração/owner para o mesmo banco;
-- `JWT_SECRET`: segredo já usado pela autenticação dos salões (mínimo 32 caracteres);
-- `PLATFORM_JWT_SECRET`: segredo independente da plataforma (mínimo 32 caracteres);
-- `NODE_ENV=production`.
+- `MIGRATION_DATABASE_URL`: preferida; conexão temporária de migration/owner para o banco real;
+- `DATABASE_URL`: fallback, que pode ser uma role restrita de runtime e por isso será submetida ao preflight antes de qualquer migration.
 
-Confirme que as duas URLs apontam para o **mesmo banco real** por um método que não exiba usuário, senha ou query string. Então execute:
+Se ambas estiverem configuradas, confirme por um método que não exiba usuário, senha ou query string que apontam para o mesmo banco real. `JWT_SECRET` e `PLATFORM_JWT_SECRET` são necessários para a aplicação autenticada após o deploy, mas não são necessários para executar o helper de migration. Instale as dependências e execute da raiz do checkout:
 
 ```bash
 npm ci --prefix backend
-npm run db:rls --prefix backend
+npm run db:apply:checked
 ```
 
-Esse comando **não gera migration**: usa `MIGRATION_DATABASE_URL` para aplicar as migrations pendentes do journal e, em seguida, executa `database/rls.sql` e `database/constraints.sql`. Aguarde código de saída zero; não interrompa o processo entre migrations e scripts de segurança. Se falhar, guarde a mensagem sem segredos e pare para investigar antes de repetir qualquer operação manual.
+O helper mostra somente host/banco/fonte da URL — nunca a URL completa — e não aceita credenciais como argumentos do shell. No fluxo normal ele pede para confirmar `host/banco`, testa permissões de DDL e ownership das tabelas/funções necessárias e exige uma confirmação textual final antes de alterar algo. Ele **não gera migrations**: após aprovação, chama `db:rls` para aplicar migrations pendentes do journal e então executar `database/rls.sql` e `database/constraints.sql`.
+
+Para testar sem conexão ou alteração, use `npm run db:apply:checked --prefix backend -- --dry-run`. Para conectar e verificar permissões sem aplicar nada, use `npm run db:apply:checked --prefix backend -- --check-only`. Aguarde código de saída zero; não interrompa o fluxo normal entre migrations e scripts de segurança. Se o preflight retornar falta de `CREATE`/ownership — como no erro de permissão do banco — pare: solicite ao provedor/administrador uma credencial temporária de owner/migration e configure `MIGRATION_DATABASE_URL`. A mesma `DATABASE_URL` só pode ser usada para migrar se o preflight passar e você confirmar explicitamente; o helper não consegue transformar uma role restrita em uma role de migration.
 
 ## Permissões mínimas da role de aplicação
 

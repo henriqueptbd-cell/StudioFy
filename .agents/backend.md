@@ -48,6 +48,7 @@ npm run test --prefix backend
 npm run typecheck --prefix backend
 npm run lint --prefix backend
 npm run db:migrate --prefix backend
+npm run db:apply:checked
 npm run db:seed --prefix backend
 ```
 

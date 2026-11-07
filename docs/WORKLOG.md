@@ -5,6 +5,16 @@
 > permite que uma nova sessão entenda o que foi pedido, o que foi decidido e por quê,
 > sem depender do histórico do chat.
 
+## 2026-11-06 — Helper seguro para migrations via .env
+
+- **Status:** Concluído; nenhuma migration executada no banco real.
+- **Pedido:** Criar um comando que leia `.env` e aplique migrations sem digitar URLs de conexão no terminal.
+- **Contexto:** O proprietário possui `DATABASE_URL`, mas a tentativa anterior retornou `42501 permission denied for database neondb`; uma role de aplicação pode não ter ownership/DDL suficiente.
+- **Decisão:** Criado `db:apply:checked`, que procura `.env` em `backend/` e na raiz (variáveis exportadas têm prioridade), prefere `MIGRATION_DATABASE_URL` e só considera `DATABASE_URL` após preflight somente de leitura e confirmação explícita. O preflight valida `CREATE`, ledger Drizzle e ownership das tabelas/funções usadas. O runner só inicia após confirmação do host/banco e frase final; não gera migrations nem exibe URLs/segredos. Sem privilégios, aborta sem iniciar DDL.
+- **Mudanças:** Novo `backend/src/db/applyMigrations.ts`, helpers/testes em `backend/src/db/migrationSafety.ts`, scripts no pacote raiz/backend, runner de migrations desacoplado de segredos JWT e com fechamento da conexão em falhas; guia manual e instruções internas atualizados.
+- **Validação:** Typecheck/lint do backend e 5 testes unitários do helper aprovados; `--dry-run` testado com URL fictícia, confirmando que mostra host/banco sem exibir usuário, senha ou URL e sem conectar. Nenhum `.env` real estava presente no sandbox; nenhuma conexão ou migration foi feita em produção.
+- **Pendências:** Executar primeiro `npm run db:apply:checked -- --check-only` no checkout do proprietário. Se a role em `DATABASE_URL` não passar no preflight, solicitar ao provedor/administrador uma credencial temporária com privilégios de migration e configurá-la em `MIGRATION_DATABASE_URL`; o helper não consegue elevar permissões.
+
 ## 2026-11-06 — Liberação progressiva da agenda
 
 - **Status:** Concluído e validado localmente.

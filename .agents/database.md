@@ -42,12 +42,14 @@ PostgreSQL.
 npm run db:generate --prefix backend   # gera migration a partir do schema
 npm run db:migrate --prefix backend    # aplica migrations
 npm run db:rls --prefix backend        # reaplica RLS
+npm run db:apply:checked               # lê .env, verifica privilégios e pede confirmação
 npm run db:seed --prefix backend       # popula demonstração
 ```
 
 ## Guarda-corpos
 
 - Nunca rode migration/seed em produção sem confirmação humana.
+- O helper `db:apply:checked` não eleva privilégios; sem ownership suficiente, deve parar antes de alterar o banco.
 - Nunca use a role proprietária na API.
 - Nunca desabilite RLS para "resolver" um erro; corrija o contexto de tenant.
 - Mudança de schema exige atualização de `docs/DATABASE_MODEL.md` e validação de RLS.

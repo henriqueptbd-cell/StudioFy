@@ -49,7 +49,7 @@ npm run test --prefix backend -- src/modules/auth/useCases/login/loginAndProvisi
 
 ## Suíte atual
 
-**A suíte validada contém 11 arquivos Vitest e 80 testes aprovados**, além de **3 cenários E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento público e assistido, janela progressiva, conversão de fuso horário, concorrência, isolamento RLS entre tenants e a console da plataforma. A integração verifica que `PROFESSIONAL` pode consultar recursos permitidos, executar transições válidas e editar a abertura da agenda pública, mas recebe 403 ao tentar alterar serviços, equipe, perfil ou horários. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
+**A suíte validada contém 12 arquivos Vitest e 85 testes aprovados**, além de **3 cenários E2E Playwright**. Vitest cobre autenticação e provisionamento, gestão de serviços e equipe, clientes, regras de agendamento público e assistido, janela progressiva, segurança do helper de migration, conversão de fuso horário, concorrência, isolamento RLS entre tenants e a console da plataforma. A integração verifica que `PROFESSIONAL` pode consultar recursos permitidos, executar transições válidas e editar a abertura da agenda pública, mas recebe 403 ao tentar alterar serviços, equipe, perfil ou horários. Os testes de banco conectam ao PostgreSQL diretamente e devem usar uma role que não seja proprietária das tabelas e não tenha `SUPERUSER` nem `BYPASSRLS`.
 
 Os cenários de `e2e/booking-flow.spec.ts` validam, pelo navegador: solicitação pública e confirmação; abertura pública inclusiva, bloqueio após o limite e agendamento assistido além da janela; login superadmin e pausa/reativação com motivo. O setup usa somente banco PostgreSQL loopback terminado em `_test` ou `_e2e`; não use produção nem banco compartilhado.
 
@@ -123,6 +123,14 @@ fluxo de criacao e transicao inicial do agendamento:
 - limite inclusivo em slots e criação pública e erro `DATE_OUT_OF_RANGE` após o limite;
 - slots e criação assistidos além da janela, ainda sujeitos a antecedência, expediente e conflitos;
 - redução da janela sem cancelamento nem exclusão de reservas existentes.
+
+### Helper seguro de migration
+
+`backend/src/db/migrationSafety.spec.ts` cobre:
+
+- preferência por `MIGRATION_DATABASE_URL` e fallback identificado para `DATABASE_URL`;
+- rejeição de URLs ausentes, malformadas ou que não sejam PostgreSQL;
+- detecção de privilégios DDL/ownership insuficientes antes de iniciar o runner.
 
 ### Gestao de equipe (Fase 6)
 

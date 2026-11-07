@@ -13,6 +13,7 @@
     "db:migrate": "drizzle-kit generate && tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:rls": "tsx src/db/migrate.ts",
+    "db:apply:checked": "tsx src/db/applyMigrations.ts",
     "platform-admin:create": "tsx src/db/create-platform-admin.ts"
   },
   "dependencies": {
